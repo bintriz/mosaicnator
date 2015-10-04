@@ -8,7 +8,7 @@
 ##$ -m abe
 #$ -l h_vmem=12G
 
-. ~/.bash_profile > /dev/null
+. /home/m130621/.bash_profile > /dev/null
 plenv shell 5.22.0
 
 ref=$1
