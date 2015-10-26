@@ -8,7 +8,7 @@
 ##$ -m abe
 #$ -l h_vmem=12G
 
-. /home/m130621/.bash_profile > /dev/null
+. ~/.bash_profile > /dev/null
 plenv shell 5.22.0
 
 ref=$1
@@ -18,5 +18,5 @@ snp=$4
 out=$5
 
 echo "Start:" $(date +"%F %T")
-./get_AF.pl -r $ref -c $clone -t $tissue -s $snp > $out
+get_AF.pl -r $ref -c $clone -t $tissue -s $snp > $out
 echo "End:" $(date +"%F %T")
