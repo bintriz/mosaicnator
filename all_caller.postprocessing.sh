@@ -5,14 +5,17 @@
 sample=$1
 datadir=$2
 
-############# somaticsniper filter out LOH
+##
+## somaticsniper filter out LOH
+##
 vcf=$datadir/$sample.somaticsniper.vcf
 outfile=$datadir/$sample.somaticsniper.somatic.vcf
 grep ^# $vcf > $outfile
 grep -v ^# $vcf|perl -ne 'if(/:2:\d+\n/) {print}' >> $outfile
 
-exit
-############# mutect filter KEEP & merge
+##
+## mutect filter KEEP & merge
+##
 subdir=$datadir/$sample.mutect
 outfile=$datadir/$sample.mutect.txt
 head -n2 $(ls $subdir/*.mutect.*.txt|head -n1) > $outfile
@@ -22,7 +25,9 @@ for subfile in $(ls $subdir/*.mutect.*.txt); do
 done
 rmdir $subdir
 
-############ varscan merge $ run processSomatic
+##
+## varscan merge $ run processSomatic
+##
 subdir=$datadir/$sample.varscan
 outfile=$subdir/$sample.varscan.snp
 head -n1 $(ls $subdir/*.varscan.*.snp|head -n1) > $outfile
