@@ -11,13 +11,14 @@
 
 . ~/.bash_profile > /dev/null
 
-tumor=$1
-normal=$2
-interval=$4
-out=$3.${interval/:/-}
-numproc=$5
+ref=$1
+tumor=$2
+normal=$3
+interval=$5
+out=$4.${interval/:/-}
+numproc=$6
 
 echo "Start:" $(date +"%F %T")
-echo scalpel --somatic --tumor $tumor --normal $normal --bed $interval --dir $out \
-	--ref data.ref/human_g1k_v37.fasta --numproc ${numproc:-10} --two-pass --window 600
+scalpel --somatic --tumor $tumor --normal $normal --bed $interval --dir $out \
+	--ref $ref --numproc ${numproc:-10} --two-pass --window 600
 echo "End:" $(date +"%F %T")
