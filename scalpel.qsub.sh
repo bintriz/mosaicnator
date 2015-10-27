@@ -30,11 +30,14 @@ for interval in $(samtools idxstats $tumor|awk '!/^*/ {print $1":1-"$2 }'|tac); 
     job_name=chr${interval/:*/}.$sample
     size=${interval/*-/}
     
-    if [[ $size -gt 100000000 ]]; then
+    if [[ $size -gt 180000000 ]]; then
 	qsub -N $job_name -q lg-mem -o $q_out -e $q_err -pe threaded 20 -l h_vmem=16G \
 	     $SCRIPT_PATH/scalpel.sh $ref $tumor $normal $outdir/$out/$out $interval 20
+    elif [[ $size -gt 100000000 ]]; then
+	qsub -N $job_name -q 4-days -o $q_out -e $q_err -pe threaded 20 -l h_vmem=10G \
+	     $SCRIPT_PATH/scalpel.sh $ref $tumor $normal $outdir/$out/$out $interval 20
     elif [[ $size -gt 10000000 ]]; then
-	qsub -N $job_name -q 4-days -o $q_out -e $q_err -pe threaded 10 -l h_vmem=12G \
+	qsub -N $job_name -q 4-days -o $q_out -e $q_err -pe threaded 10 -l h_vmem=10G \
 	     $SCRIPT_PATH/scalpel.sh $ref $tumor $normal $outdir/$out/$out $interval 10
     else
 	qsub -N $job_name -q 4-days -o $q_out -e $q_err -pe threaded 4 -l h_vmem=8G  \
