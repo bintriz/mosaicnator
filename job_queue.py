@@ -49,12 +49,12 @@ class Queue(object):
             return 'done'
 
     def _allq_jstate_count(self, jstate):
-            allq_jstate_list = [jinfo['state'] for jinfo in self._allq.values()]
-            return allq_jstate_list.count(jstate)        
+        allq_jstate_list = [jinfo['state'] for jinfo in self._allq.values()]
+        return allq_jstate_list.count(jstate)        
 
     def _subq_jstate_count(self, jstate):
-            subq_jstate_list = [jinfo['state'] for jinfo in self.__class__.subq.values()]
-            return subq_jstate_list.count(jstate)        
+        subq_jstate_list = [jinfo['state'] for jinfo in self.__class__.subq.values()]
+        return subq_jstate_list.count(jstate)        
         
     def submit(self, q_opt_str, cmd_str):
         self._allq_wait()
