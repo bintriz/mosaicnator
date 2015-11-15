@@ -25,19 +25,19 @@ else
     q_out=q.out/mutect.$sample
     
     if [ ! -d $outdir/$out ]; then
-	mkdir -p $outdir/$out
+        mkdir -p $outdir/$out
     fi
     if [ ! -d $q_err ]; then
-	mkdir -p $q_err
+        mkdir -p $q_err
     fi
     if [ ! -d $q_out ]; then
-	mkdir -p $q_out
+        mkdir -p $q_out
     fi
 
     for interval in $(awk '{print $1":"$2+1"-"$3 }' $interval_bed); do
-	job_name=mutect.$sample.${interval/:/-}
-	echo Submit $out $interval
-	qsub -N $job_name -q 1-day -o $q_out -e $q_err $SCRIPT_PATH/mutect.sh $ref $tumor $normal $outdir/$out/$out $interval
+        job_name=mutect.$sample.${interval/:/-}
+        echo Submit $out $interval
+        qsub -N $job_name -q 1-day -o $q_out -e $q_err $SCRIPT_PATH/mutect.sh $ref $tumor $normal $outdir/$out/$out $interval
     done
 fi
 
@@ -51,7 +51,7 @@ if [ "$interval_bed" == "" ]; then
     echo Submit $out
 
     if [ ! -d $outdir/$out ]; then
-	mkdir -p $outdir/$out
+        mkdir -p $outdir/$out
     fi
     
     qsub -N $job_name -q 1-day $SCRIPT_PATH/varscan.sh $ref $tumor $normal $outdir/$out/$out
@@ -60,19 +60,19 @@ else
     q_out=q.out/varscan.$sample
     
     if [ ! -d $outdir/$out ]; then
-	mkdir -p $outdir/$out
+        mkdir -p $outdir/$out
     fi
     if [ ! -d $q_err ]; then
-	mkdir -p $q_err
+        mkdir -p $q_err
     fi
     if [ ! -d $q_out ]; then
-	mkdir -p $q_out
+        mkdir -p $q_out
     fi
 
     for interval in $(awk '{print $1":"$2+1"-"$3 }' $interval_bed); do 
-	job_name=varscan.$sample.${interval/:/-}
-	echo Submit $out $interval
-	qsub -N $job_name -q 1-day -o $q_out -e $q_err $SCRIPT_PATH/varscan.sh $ref $tumor $normal $outdir/$out/$out $interval
+        job_name=varscan.$sample.${interval/:/-}
+        echo Submit $out $interval
+        qsub -N $job_name -q 1-day -o $q_out -e $q_err $SCRIPT_PATH/varscan.sh $ref $tumor $normal $outdir/$out/$out $interval
     done
 fi
 
