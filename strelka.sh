@@ -15,7 +15,7 @@ tumor=$2
 normal=$3
 outdir=$4
 
-echo "Start" $(date +"%F %T")
+echo "Start:" $(date +"%F %T")
 configureStrelkaWorkflow.pl --ref $ref --tumor $tumor --normal $normal \
 	--config ~/apps/strelka/current/etc/strelka_config_bwa_default.ini --output-dir $outdir
 make -j 16 -C $outdir
