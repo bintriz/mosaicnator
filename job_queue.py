@@ -5,7 +5,9 @@ import time
 
 class Queue(object):
     subq = {}
-    max_submit = 20
+
+    def __init__(self, max_submit=8000):
+        self.max_submit = max_submit
         
     def _update(self):
         xmlstr = subprocess.check_output(['qstat', '-xml']).decode('utf-8')
@@ -35,7 +37,7 @@ class Queue(object):
         while True:
             self._update()
 
-            if len(self._allq) < self.__class__.max_submit:
+            if len(self._allq) < self.max_submit:
                 return
 
             self._print_jstate()
@@ -55,7 +57,10 @@ class Queue(object):
     def _subq_jstate_count(self, jstate):
         subq_jstate_list = [jinfo['state'] for jinfo in self.__class__.subq.values()]
         return subq_jstate_list.count(jstate)        
-        
+
+    def test_submit(self, q_opt_str, cmd_str):
+        print('qsub {} {}'.format(q_opt_str, cmd_str))
+
     def submit(self, q_opt_str, cmd_str):
         self._allq_wait()
 
