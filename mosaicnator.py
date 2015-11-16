@@ -76,7 +76,11 @@ def main():
     # ===============
     
     args = parser.parse_args()
-    args.func(args)
+
+    if(len(vars(args)) == 0):
+        parser.print_help()
+    else:
+        args.func(args)
 
 if __name__ == "__main__":
     main()
