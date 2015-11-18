@@ -1,8 +1,7 @@
 #!/data2/external_data/Abyzov_Alexej_m124423/apps/pyenv/versions/3.5.0/bin/python
 
 import argparse
-from job_queue import Queue
-from somatic_caller import Caller
+from worker import SomaticCall
 from utils import parse_sample_list_file
 
 
@@ -11,13 +10,13 @@ def somatic_call(args):
     sample_list = parse_sample_list_file(args.infile)
     out_dir = 'data.somatic_call'
     
-    c = Caller(ref, out_dir)
+    c = SomaticCall(ref, out_dir)
     for clone, tissue in sample_list:
-#        print(clone, tissue)
         c.run(clone, tissue)
-        
-#    Queue().wait('somatic_call')
 
+def somatic_postprocess(args):
+    
+        
 def main():
     parser = argparse.ArgumentParser(
         description='Somatic Mosaic SNV/indel caller')

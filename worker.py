@@ -1,5 +1,5 @@
 import os
-from job_queue import Queue
+from job_queue import GridEngineQueue, LocalQueue
 from utils import (
     check_qdir,
     check_dir,
@@ -8,7 +8,7 @@ from utils import (
     get_chunk_intervals)
 
 
-class Caller(object):
+class SomaticCall:
     def __init__(self, ref, out_dir):
         check_ref_index(ref)
         check_dir(out_dir)
@@ -16,10 +16,11 @@ class Caller(object):
         self.ref = ref
         self.chunk_intervals = get_chunk_intervals(ref + '.fai', 25000000)
         self.out_dir = out_dir
-        self.cmd_dir = os.path.dirname(os.path.realpath(__file__))
+        self.exec_dir = os.path.dirname(os.path.realpath(__file__))
+        self.q = GridEngineQueue()
     
     def _get_cmdpath(self, cmd):
-        return os.path.join(self.cmd_dir, cmd)
+        return os.path.join(self.exec_dir, 'job_scripts', cmd)
 
     def _run_mutect(self, clone, tissue):
         cmd = self._get_cmdpath('mutect.sh')
@@ -38,7 +39,7 @@ class Caller(object):
                 job_name, sub_name, sub_name)
             cmd_str = '{} {} {} {} {} {}'.format(
                 cmd, self.ref, clone, tissue, out_name, interval)
-            Queue().submit(q_opt_str, cmd_str)
+            self.q.submit(q_opt_str, cmd_str)
 
     def _run_somaticsniper(self, clone, tissue):
         cmd = self._get_cmdpath('somaticsniper.sh')
@@ -47,7 +48,7 @@ class Caller(object):
         q_opt_str = '-N {}'.format(job_name)
         cmd_str = '{} {} {} {} {}'.format(
             cmd, self.ref, clone, tissue, out_name)
-        Queue().submit(q_opt_str, cmd_str)
+        self.q.submit(q_opt_str, cmd_str)
 
     def _run_strelka(self, clone, tissue):
         cmd = self._get_cmdpath('strelka.sh')
@@ -56,7 +57,7 @@ class Caller(object):
         q_opt_str = '-N {}'.format(job_name)
         cmd_str = '{} {} {} {} {}'.format(
             cmd, self.ref, clone, tissue, out_name)
-        Queue().submit(q_opt_str, cmd_str)
+        self.q.submit(q_opt_str, cmd_str)
 
     def _run_varscan(self, clone, tissue):
         cmd = self._get_cmdpath('varscan.sh')
@@ -75,13 +76,7 @@ class Caller(object):
                 job_name, sub_name, sub_name)
             cmd_str = '{} {} {} {} {} {}'.format(
                 cmd, self.ref, clone, tissue, out_name, interval)
-            Queue().submit(q_opt_str, cmd_str)
-
-#    def _post_mutect(self):
-
-#    def _post_somaticsniper(self):
-
-#    def _post_varscan(self):
+            self.q.submit(q_opt_str, cmd_str)
 
     def run(self, clone, tissue, out_name=None):
         check_bam_index(clone)
@@ -97,7 +92,22 @@ class Caller(object):
         self._run_mutect(clone, tissue)
         self._run_varscan(clone, tissue)
 
-    def postprocess(self):
+        #self.q.wait('somatic_call')
+
+class PostProcess:
+    def __init__(data_dir):
+        self.data_dir = data_dir
+        
+    def _post_mutect(self):
+        pass
+
+    def _post_somaticsniper(self):
+        pass
+
+    def _post_varscan(self):
+        pass
+
+    def run(self):
         self._post_mutect()
         self._post_somaticsniper()
         self._post_varscan()

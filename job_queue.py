@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 import time
 
 
-class Queue(object):
+class GridEngineQueue:
     subq = {}
 
     def __init__(self, max_submit=8000):
@@ -92,3 +92,9 @@ class Queue(object):
 
             self._print_jstate()
             time.sleep(5)
+
+class LocalQueue:
+    def submit(self, cmd_str):
+        pass
+    def wait(self, job_name=''):
+        pass
