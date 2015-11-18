@@ -15,7 +15,7 @@ def somatic_call(args):
         c.run(clone, tissue)
 
 def somatic_postprocess(args):
-    
+    pass
         
 def main():
     parser = argparse.ArgumentParser(
