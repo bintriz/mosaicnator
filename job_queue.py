@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import subprocess
 import xml.etree.ElementTree as ET
 import time
@@ -94,7 +95,51 @@ class GridEngineQueue:
             time.sleep(5)
 
 class LocalQueue:
+    def __init__(self, max_submit=None):
+        cpu_n = mp.cpu_count()
+        if max_submit == None or max_submit > cpu_n:
+            self.max_submit = cpu_n
+        else:
+            self.max_submit = max_submit
+
+        self.q = []
+
+    def _update(self):
+        for p in self.q:
+            if not p.is_alive():
+                self.q.remove(p)
+
+    def _q_wait(self):
+        while True:
+            self._update()
+            
+            if len(self.q) < self.max_submit:
+                return
+            
+            time.sleep(3)
+            
     def submit(self, cmd_str):
-        pass
+        p = mp.Process(
+            target=lambda x: subprocess.run(x, shell=True),
+            args=(cmd_str,))
+        p.start()
+        self.q.append(p)
+
+    def call(self, f):
+        p= mp.Process(target=f)
+        p.start()
+        self.q.append(p)
+        
     def wait(self, job_name=''):
-        pass
+        while True:
+            self._update()
+
+            if len(self.q) == 0:
+                return
+
+            time.sleep(3)
+        
+        if job_name != '':
+            print('All {} jobs done'.format(job_name))
+        else:
+            print('All jobs done')
