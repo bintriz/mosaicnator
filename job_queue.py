@@ -37,17 +37,14 @@ class GridEngineQueue:
     def _allq_wait(self):
         while True:
             self._update()
-
             if len(self._allq) < self.max_submit:
                 return
-
             self._print_jstate()
             time.sleep(5)
 
     def _allq_jstate(self, jid):
         try:
             return self._allq[jid]['state']
-
         except KeyError:
             return 'done'
 
@@ -64,7 +61,6 @@ class GridEngineQueue:
 
     def submit(self, q_opt_str, cmd_str):
         self._allq_wait()
-
         qsub_cmd_list = ["qsub"] + q_opt_str.split() + cmd_str.split()
         stdout = subprocess.check_output(qsub_cmd_list).decode('utf-8')
 
@@ -112,13 +108,12 @@ class LocalQueue:
     def _q_wait(self):
         while True:
             self._update()
-            
             if len(self.q) < self.max_submit:
                 return
-            
             time.sleep(3)
             
     def submit(self, cmd_str):
+        self._q_wait()
         p = mp.Process(
             target=lambda x: subprocess.run(x, shell=True),
             args=(cmd_str,))
@@ -126,6 +121,7 @@ class LocalQueue:
         self.q.append(p)
 
     def call(self, f):
+        self._q_wait()
         p= mp.Process(target=f)
         p.start()
         self.q.append(p)
@@ -133,13 +129,11 @@ class LocalQueue:
     def wait(self, job_name=''):
         while True:
             self._update()
-
             if len(self.q) == 0:
+                if job_name != '':
+                    print('All {} jobs done'.format(job_name))
+                else:
+                    print('All jobs done')
                 return
-
             time.sleep(3)
-        
-        if job_name != '':
-            print('All {} jobs done'.format(job_name))
-        else:
-            print('All jobs done')
+            
