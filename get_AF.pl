@@ -34,7 +34,9 @@ if(defined $tissue_bam_file) {
     print_header(0);
 }
 
+check_bam_index($clone_bam_file);
 my $clone_sam  = Bio::DB::Sam->new(-fasta => $ref_file, -bam => $clone_bam_file);
+check_bam_index($tissue_bam_file) if defined $tissue_bam_file;
 my $tissue_sam = Bio::DB::Sam->new(-fasta => $ref_file, -bam => $tissue_bam_file) if defined $tissue_bam_file;
 open (my $snp_list, "<", $snp_list_file);
 
@@ -63,6 +65,17 @@ sub print_header {
 	print "#chr\tpos\tref\talt\tclone_f\tcl_total_reads\tcl_ref_count\tcl_alt_count\n";
     } elsif($opt == 1) {
 	print "#chr\tpos\tref\talt\tclone_f\tcl_total_reads\tcl_ref_count\tcl_alt_count\ttissue_f\tti_total_reads\tti_ref_count\tti_alt_count\n";	
+    }
+}
+
+sub check_bam_index {
+    my $bam = shift;
+    my $bai = $bam;
+    $bai =~ s/.bam$/.bai/;
+    my $bam_bai = $bam . '.bai';
+
+    if (-e $bai && ! -e $bam_bai) {
+	system("cp -a $bai $bam_bai")
     }
 }
 
