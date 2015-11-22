@@ -20,15 +20,15 @@ from utils import (
 
 class SomaticCall:
     def __init__(self, ref, out_dir):
+        make_dir(out_dir)
+        self.out_dir = out_dir
         check_ref_index(ref)
         check_ref_dict(ref)
-        make_dir(out_dir)
-        make_qdir()
         self.ref = ref
         self.chunk_intervals = get_chunk_intervals(ref + '.fai', 25000000)
-        self.out_dir = out_dir
-        self.exec_dir = os.path.dirname(os.path.realpath(__file__))
+        make_qdir()
         self.q = GridEngineQueue()
+        self.exec_dir = os.path.dirname(os.path.realpath(__file__))
     
     def _get_cmdpath(self, cmd):
         return os.path.join(self.exec_dir, 'job_scripts', cmd)
@@ -110,10 +110,10 @@ class SomaticCall:
 
 class PostProcess:
     def __init__(self, ref, data_dir):
-        check_ref_index(ref)
         check_dir(data_dir)
-        self.chunk_intervals = get_chunk_intervals(ref + '.fai', 25000000)
         self.data_dir = data_dir
+        check_ref_index(ref)
+        self.chunk_intervals = get_chunk_intervals(ref + '.fai', 25000000)
         self.q = LocalQueue()
         
     def _post_mutect(self):
@@ -215,10 +215,135 @@ class PostProcess:
         self.q.wait('postprocess')
 
 class AlleleFreq:
-    def __init__(self, data_dir, out_dir):
+    def __init__(self, ref, data_dir, out_dir):
+        check_ref_index(ref)
+        self.ref = ref
+        check_dir(data_dir)
         self.data_dir = data_dir
+        make_dir(out_dir)
         self.out_dir = out_dir
         self.q = LocalQueue()
+
+    def _snv_AF_mutect(self):
+        data_file = '{}/{}.mutect.txt'.format(
+            self.data_dir, self.sample_name)
+        tmp_file = '{}/{}.mutect.snv_coord.txt'.format(
+            self.out_dir, self.sample_name)
+        out_file = '{}/{}.mutect.snv_AF.txt'.format(
+            self.out_dir, self.sample_name)
+
+        check_outfile(out_file)
         
+        with open(tmp_file, 'w') as tmp:
+            for line in read_body(data_file, 3):
+                chrom, pos, id, ref, alt_str = line.split('\t')[:5]
+                alts = alt_str.split(',')
+                for alt in alts:
+                    tmp.write('{}\t{}\t{}\t{}\n'.format(chrom, pos, ref, alt))
+        
+        # af_out = subprocess.check_output(
+        #     ['get_AF.pl', '-r', self.ref,
+        #      '-c', self.clone, '-t', self.tissue, '-s', tmp_file]).decode('utf-8')
+
+        # with open(out_file, 'w') as out:
+        #     out.write(af_out)
+        
+        # os.remove(tmp_file)
+
+
+    def _snv_AF_somaticsniper(self):
+        data_file = '{}/{}.somaticsniper.somatic.vcf'.format(
+            self.data_dir, self.sample_name)
+        tmp_file = '{}/{}.somaticsniper.snv_coord.txt'.format(
+            self.out_dir, self.sample_name)
+        out_file = '{}/{}.somaticsniper.snv_AF.txt'.format(
+            self.out_dir, self.sample_name)
+
+        check_outfile(out_file)
+        
+        with open(tmp_file, 'w') as tmp:
+            for line in read_vcf_body(data_file):
+                chrom, pos, id, ref, alt_str = line.split('\t')[:5]
+                alts = alt_str.split(',')
+                for alt in alts:
+                    tmp.write('{}\t{}\t{}\t{}\n'.format(chrom, pos, ref, alt))
+        
+        # af_out = subprocess.check_output(
+        #     ['get_AF.pl', '-r', self.ref,
+        #      '-c', self.clone, '-t', self.tissue, '-s', tmp_file]).decode('utf-8')
+
+        # with open(out_file, 'w') as out:
+        #     out.write(af_out)
+        
+        # os.remove(tmp_file)
+        
+    def _snv_AF_strelka(self):
+        data_file = '{}/{}.mutect/results/passed.somatic.snvs.vcf'.format(
+            self.data_dir, self.sample_name)
+        tmp_file = '{}/{}.strelka.snv_coord.txt'.format(
+            self.out_dir, self.sample_name)
+        out_file = '{}/{}.strelka.snv_AF.txt'.format(
+            self.out_dir, self.sample_name)
+        
+        check_outfile(out_file)
+        
+        with open(tmp_file, 'w') as tmp:
+            for line in read_vcf_body(data_file):
+                chrom, pos, id, ref, alt_str = line.split('\t')[:5]
+                alts = alt_str.split(',')
+                for alt in alts:
+                    tmp.write('{}\t{}\t{}\t{}\n'.format(chrom, pos, ref, alt))
+        
+        # af_out = subprocess.check_output(
+        #     ['get_AF.pl', '-r', self.ref,
+        #      '-c', self.clone, '-t', self.tissue, '-s', tmp_file]).decode('utf-8')
+
+        # with open(out_file, 'w') as out:
+        #     out.write(af_out)
+        
+        # os.remove(tmp_file)
+
+    def _snv_AF_varscan(self):
+        data_file = '{}/{}.varscan/{}.varscan.snp.Somatic.hc'.format(
+            self.data_dir, self.sample_name, self.sample_name)
+        tmp_file = '{}/{}.varscan.snv_coord.txt'.format(
+            self.out_dir, self.sample_name)
+        out_file = '{}/{}.varscan.snv_AF.txt'.format(
+            self.out_dir, self.sample_name)
+
+        check_outfile(out_file)
+        
+        with open(tmp_file, 'w') as tmp:
+            for line in read_body(data_file):
+                chrom, pos, ref, alt_str = line.split('\t')[:4]
+                alts = alt_str.split(',')
+                for alt in alts:
+                    tmp.write('{}\t{}\t{}\t{}\n'.format(chrom, pos, ref, alt))
+        
+        # af_out = subprocess.check_output(
+        #     ['get_AF.pl', '-r', self.ref,
+        #      '-c', self.clone, '-t', self.tissue, '-s', tmp_file]).decode('utf-8')
+
+        # with open(out_file, 'w') as out:
+        #     out.write(af_out)
+        
+        # os.remove(tmp_file)
+        
+    def _indel_AF_strelka(self):
+        pass
+
+    def _indel_AF_varscan(self):
+        pass
+
+    def run(self, clone, tissue):
+        self.sample_name = get_samplename(clone)
+        self.clone = clone
+        self.tissue = tissue
+
+        self.q.call(self._snv_AF_mutect)
+        self.q.call(self._snv_AF_somaticsniper)
+        self.q.call(self._snv_AF_strelka)
+        self.q.call(self._snv_AF_varscan)
+    
     def wait(self):
         self.q.wait('AF calculation')
