@@ -70,6 +70,7 @@ class GridEngineQueue:
 
         self._update()
         self._print_jstate()
+        return jid
 
     def wait(self, job_name=''):
         while True:
