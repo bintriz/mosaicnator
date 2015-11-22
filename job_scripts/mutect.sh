@@ -13,14 +13,14 @@
 ref=$1
 tumor=$2
 normal=$3
+out=$4
 interval=$5
 
 echo "Start:" $(date +"%F %T")
 if [ "$interval" == "" ]; then
-    out=$4
     mutect 8 -I:tumor $tumor -I:normal $normal --out $out.txt --only_passing_calls -R $ref
 else
-    out=$4.${interval/:/-}
+    out=$out.${interval/:/-}
     mutect 8 -I:tumor $tumor -I:normal $normal --out $out.txt --only_passing_calls -R $ref -L $interval
 fi
 echo "End:" $(date +"%F %T")
