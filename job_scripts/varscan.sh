@@ -13,14 +13,10 @@
 ref=$1
 tumor=$2
 normal=$3
+out=$4
 interval=$5
 
 echo "Start:" $(date +"%F %T")
-if [ "$interval" == "" ]; then
-    out=$4
-    samtools mpileup -f $ref $normal $tumor|varscan 8 somatic --mpileup $out
-else
-    out=$4.${interval/:/-}
-    samtools mpileup -f $ref -r $interval $normal $tumor|varscan 8 somatic --mpileup $out
-fi
+out=$out.${interval/:/-}
+samtools mpileup -f $ref -r $interval $normal $tumor|varscan 8 somatic --mpileup $out
 echo "End:" $(date +"%F %T")
