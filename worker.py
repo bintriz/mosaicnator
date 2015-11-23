@@ -34,7 +34,7 @@ class SomaticCall:
         return os.path.join(self.exec_dir, 'job_scripts', cmd)
 
     def _run_mutect(self):
-        cmd = self._get_cmdpath('mutect.sh')
+        cmd = self._get_cmdpath('run_mutect_chunk.sh')
         sub_name = self.out_name + '.mutect'
         out_dir = '{}/{}'.format(self.out_dir, sub_name)
         out_name = '{}/{}'.format(out_dir, sub_name)
@@ -53,7 +53,7 @@ class SomaticCall:
             self.q.submit(q_opt_str, cmd_str)
 
     def _run_somaticsniper(self):
-        cmd = self._get_cmdpath('somaticsniper.sh')
+        cmd = self._get_cmdpath('run_somaticsniper.sh')
         job_name = 'somaticsniper.{}'.format(self.out_name)
         out_name = '{}/{}.somaticsniper'.format(self.out_dir, self.out_name)
         q_opt_str = '-N {}'.format(job_name)
@@ -62,7 +62,7 @@ class SomaticCall:
         self.q.submit(q_opt_str, cmd_str)
 
     def _run_strelka(self):
-        cmd = self._get_cmdpath('strelka.sh')
+        cmd = self._get_cmdpath('run_strelka.sh')
         job_name = 'strelka.{}'.format(self.out_name)
         out_name = '{}/{}.strelka'.format(self.out_dir, self.out_name)
         q_opt_str = '-N {}'.format(job_name)
@@ -71,7 +71,7 @@ class SomaticCall:
         self.q.submit(q_opt_str, cmd_str)
 
     def _run_varscan(self):
-        cmd = self._get_cmdpath('varscan.sh')
+        cmd = self._get_cmdpath('run_varscan_chunk.sh')
         sub_name = self.out_name + '.varscan'
         out_dir = '{}/{}'.format(self.out_dir, sub_name)
         out_name = '{}/{}'.format(out_dir, sub_name)
@@ -205,11 +205,11 @@ class PostProcess:
     def run(self, sample):
         self.sample_name = get_samplename(sample)
         
-        self.q.call(self._post_mutect)
-        self.q.call(self._post_somaticsniper)
-        self.q.call(self._post_strelka)
-        self.q.call(self._post_varscan_snv)
-        self.q.call(self._post_varscan_indel)
+        self._post_mutect()
+        self._post_somaticsniper()
+        self._post_strelka()
+        self._post_varscan_snv()
+        self._post_varscan_indel()
 
     def wait(self):
         self.q.wait('postprocess')
@@ -222,128 +222,75 @@ class AlleleFreq:
         self.data_dir = data_dir
         make_dir(out_dir)
         self.out_dir = out_dir
-        self.q = LocalQueue()
+        self.q = GridEngineQueue()
+        self.exec_dir = os.path.dirname(os.path.realpath(__file__))
+    
+    def _cmdpath(self, cmd):
+        return os.path.join(self.exec_dir, 'job_scripts', cmd)
 
-    def _snv_AF_mutect(self):
-        data_file = '{}/{}.mutect.txt'.format(
-            self.data_dir, self.sample_name)
-        tmp_file = '{}/{}.mutect.snv_coord.txt'.format(
-            self.out_dir, self.sample_name)
-        out_file = '{}/{}.mutect.snv_AF.txt'.format(
-            self.out_dir, self.sample_name)
+    def _datadir(self, caller):
+        return '{}/{}.{}'.format(self.data_dir, self.sample_name, caller)
 
-        check_outfile(out_file)
-        
-        with open(tmp_file, 'w') as tmp:
-            for line in read_body(data_file, 3):
-                chrom, pos, id, ref, alt_str = line.split('\t')[:5]
-                alts = alt_str.split(',')
-                for alt in alts:
-                    tmp.write('{}\t{}\t{}\t{}\n'.format(chrom, pos, ref, alt))
-        
-        # af_out = subprocess.check_output(
-        #     ['get_AF.pl', '-r', self.ref,
-        #      '-c', self.clone, '-t', self.tissue, '-s', tmp_file]).decode('utf-8')
+    def _snv_call_file(self, caller):
+        if caller == 'mutect':
+            call_file = '{}.mutect.keep.txt'.format(self.sample_name)
+        elif caller == 'somaticsniper':
+            call_file = '{}.somaticsniper.somatic.vcf'.format(self.sample_name)
+        elif caller == 'strelka':
+            call_file = 'results/passed.somatic.snvs.vcf'
+        elif caller == 'varscan':
+            call_file = '{}.varscan.snp.Somatic.hc'.format(self.sample_name)
+        return '{}/{}'.format(self._datadir(caller), call_file)
+    
+    def _snv_coord_file(self, caller):
+        return '{}/{}.{}.snv_coord.txt'.format(self.out_dir, self.sample_name, caller)
 
-        # with open(out_file, 'w') as out:
-        #     out.write(af_out)
-        
-        # os.remove(tmp_file)
+    def _snv_coord_qopt(self, caller, hold_jid=None):
+        job_name = '{}_snv_coord.{}'.format(caller, self.sample_name)
+        if hold_jid == None:
+            q_opt_str = '-N {}'.format(job_name)
+        else:
+            q_opt_str = '-N {} -hold_jid {}'.format(job_name, hold_jid)
+        return q_opt_str
 
+    def _snv_coord_cmd(self, caller):
+        return self._cmdpath('snv_coord_{}.sh'.format(caller))
+        
+    def _snv_coord_submit(self, caller, hold_jid=None):
+        call_file = self._snv_call_file(caller)
+        coord_file = self._snv_coord_file(caller)
+        q_opt_str = self._snv_coord_qopt(caller, hold_jid)
+        cmd_str = '{} {} {}'.format(
+            self._snv_coord_cmd(caller), call_file, coord_file)
+        submit_jid = self.q.submit(q_opt_str, cmd_str)
+        return submit_jid
 
-    def _snv_AF_somaticsniper(self):
-        data_file = '{}/{}.somaticsniper.somatic.vcf'.format(
-            self.data_dir, self.sample_name)
-        tmp_file = '{}/{}.somaticsniper.snv_coord.txt'.format(
-            self.out_dir, self.sample_name)
-        out_file = '{}/{}.somaticsniper.snv_AF.txt'.format(
-            self.out_dir, self.sample_name)
-
-        check_outfile(out_file)
+    def _snv_AF_file(self, caller):
+        return '{}/{}.{}.snv_AF.txt'.format(self.out_dir, self.sample_name, caller)
         
-        with open(tmp_file, 'w') as tmp:
-            for line in read_vcf_body(data_file):
-                chrom, pos, id, ref, alt_str = line.split('\t')[:5]
-                alts = alt_str.split(',')
-                for alt in alts:
-                    tmp.write('{}\t{}\t{}\t{}\n'.format(chrom, pos, ref, alt))
-        
-        # af_out = subprocess.check_output(
-        #     ['get_AF.pl', '-r', self.ref,
-        #      '-c', self.clone, '-t', self.tissue, '-s', tmp_file]).decode('utf-8')
-
-        # with open(out_file, 'w') as out:
-        #     out.write(af_out)
-        
-        # os.remove(tmp_file)
-        
-    def _snv_AF_strelka(self):
-        data_file = '{}/{}.mutect/results/passed.somatic.snvs.vcf'.format(
-            self.data_dir, self.sample_name)
-        tmp_file = '{}/{}.strelka.snv_coord.txt'.format(
-            self.out_dir, self.sample_name)
-        out_file = '{}/{}.strelka.snv_AF.txt'.format(
-            self.out_dir, self.sample_name)
-        
-        check_outfile(out_file)
-        
-        with open(tmp_file, 'w') as tmp:
-            for line in read_vcf_body(data_file):
-                chrom, pos, id, ref, alt_str = line.split('\t')[:5]
-                alts = alt_str.split(',')
-                for alt in alts:
-                    tmp.write('{}\t{}\t{}\t{}\n'.format(chrom, pos, ref, alt))
-        
-        # af_out = subprocess.check_output(
-        #     ['get_AF.pl', '-r', self.ref,
-        #      '-c', self.clone, '-t', self.tissue, '-s', tmp_file]).decode('utf-8')
-
-        # with open(out_file, 'w') as out:
-        #     out.write(af_out)
-        
-        # os.remove(tmp_file)
-
-    def _snv_AF_varscan(self):
-        data_file = '{}/{}.varscan/{}.varscan.snp.Somatic.hc'.format(
-            self.data_dir, self.sample_name, self.sample_name)
-        tmp_file = '{}/{}.varscan.snv_coord.txt'.format(
-            self.out_dir, self.sample_name)
-        out_file = '{}/{}.varscan.snv_AF.txt'.format(
-            self.out_dir, self.sample_name)
-
-        check_outfile(out_file)
-        
-        with open(tmp_file, 'w') as tmp:
-            for line in read_body(data_file):
-                chrom, pos, ref, alt_str = line.split('\t')[:4]
-                alts = alt_str.split(',')
-                for alt in alts:
-                    tmp.write('{}\t{}\t{}\t{}\n'.format(chrom, pos, ref, alt))
-        
-        # af_out = subprocess.check_output(
-        #     ['get_AF.pl', '-r', self.ref,
-        #      '-c', self.clone, '-t', self.tissue, '-s', tmp_file]).decode('utf-8')
-
-        # with open(out_file, 'w') as out:
-        #     out.write(af_out)
-        
-        # os.remove(tmp_file)
-        
-    def _indel_AF_strelka(self):
-        pass
-
-    def _indel_AF_varscan(self):
-        pass
+    def _snv_AF_qopt(self, caller, hold_jid=None):
+        job_name = '{}_snv_AF.{}'.format(caller, self.sample_name)
+        if hold_jid == None:
+            q_opt_str = '-N {}'.format(job_name)
+        else:
+            q_opt_str = '-N {} -hold_jid {}'.format(job_name, hold_jid)
+        return q_opt_str
+    
+    def _snv_AF_submit(self, caller, hold_jid=None):
+        coord_file = self._snv_coord_file(caller)
+        af_file = self._snv_AF_file(caller)
+        q_opt_str = self._snv_AF_qopt(caller, hold_jid)
+        cmd_str = '{} {} {} {} {} {}'.format(
+            self._cmdpath('snv_af.sh'), self.ref, self.clone, self.tissue, coord_file, af_file)
+        submit_jid = self.q.submit(q_opt_str, cmd_str)
+        return submit_jid
 
     def run(self, clone, tissue):
         self.sample_name = get_samplename(clone)
         self.clone = clone
         self.tissue = tissue
 
-        self.q.call(self._snv_AF_mutect)
-        self.q.call(self._snv_AF_somaticsniper)
-        self.q.call(self._snv_AF_strelka)
-        self.q.call(self._snv_AF_varscan)
-    
-    def wait(self):
-        self.q.wait('AF calculation')
+        self._snv_AF_submit('mutect', self._snv_coord_submit('mutect'))
+        self._snv_AF_submit('somaticsniper', self._snv_coord_submit('somaticsniper'))
+        self._snv_AF_submit('strelka', self._snv_coord_submit('strelka'))
+        self._snv_AF_submit('varscan', self._snv_coord_submit('varscan'))
