@@ -4,50 +4,77 @@ import argparse
 from worker import (
     SomaticCall,
     PostProcess,
-    AlleleFreq)
+    SNVCoord,
+    AlleleFreq,
+    SNVConCall)
 from utils import (
     read_sample_pairs,
     read_samples)
 
 
-def somatic_call(args):
+def somatic(args):
     ref = args.ref
-    out_dir = 'data.somatic_call'
     
-    c = SomaticCall(ref, out_dir)
+    call = SomaticCall(ref, 'somatic.call')
+    post = PostProcess(ref, 'somatic.call')
+    coord = SNVCoord('somatic.call', 'somatic.AF')
+    freq = AlleleFreq(ref, 'somatic.AF')
+    con = SNVConCall('somatic.AF', 'somatic.out')
+
     for clone, tissue in read_sample_pairs(args.infile):
-        c.run(clone, tissue)
-    #c.wait()
+        hold_jid = call.run(clone, tissue)
+        hold_jid = post.run(clone, tissue, hold_jid)
+        hold_jid = coord.run(clone, tissue, hold_jid)
+        hold_jid = freq.run(clone, tissue, hold_jid)
+        con.run(clone, tissue, hold_jid)
 
-def somatic_af(args):
+def sensitivity(args):
     ref = args.ref
-    data_dir = 'data.somatic_call'
-    out_dir = 'data.AF'
+    tissue = args.bam
 
-    print(ref)
-    # p = PostProcess(ref, data_dir)
-    # for sample in read_samples(args.infile):
-    #     p.run(sample)
-    # p.wait()
+    call = SomaticCall(ref, 'sensitivity.call')
+    post = PostProcess(ref, 'sensitivity.call')
+    coord = SNVCoord('sensitivity.call', 'sensitivity.AF')
+    freq = AlleleFreq(ref, 'sensitivity.AF')
+    con = SNVConCall('sensitivity.AF', 'sensitivity.out')
+
+    for clone in read_samples(args.infile):
+        hold_jid = call.run(clone, tissue)
+        hold_jid = post.run(clone, tissue, hold_jid)
+        hold_jid = coord.run(clone, tissue, hold_jid)
+        hold_jid = freq.run(clone, tissue, hold_jid)
+        con.run(clone, tissue, hold_jid)
+
+def pairwise(args):
+    ref = args.ref
     
-    # f = AlleleFreq(ref, data_dir, out_dir)
-    # for clone, tissue in read_sample_pairs(args.infile):
-    #     f.run(clone, tissue)
-    # f.wait()
+    call = SomaticCall(ref, 'pairwise.call')
+    post = PostProcess(ref, 'pairwise.call')
+    coord = SNVCoord('pairwise.call', 'pairwise.AF')
+    freq = AlleleFreq(ref, 'pairwise.AF')
+    con = SNVConCall('pairwise.AF', 'pairwise.out')
+
+    for clone, tissue in read_samples(args.infile):
+        hold_jid = call.run(clone, tissue)
+        hold_jid = post.run(clone, tissue, hold_jid)
+        hold_jid = coord.run(clone, tissue, hold_jid)
+        hold_jid = freq.run(clone, tissue, hold_jid)
+        con.run(clone, tissue, hold_jid)
         
 def main():
     parser = argparse.ArgumentParser(
         description='Somatic Mosaic SNV/indel caller')
     subparsers = parser.add_subparsers(help='commands')
 
-    # ==============================
-    # somatic_call command arguments
-    # ==============================
+    # =========================
+    # somatic command arguments
+    # =========================
     
-    parser_somatic_call = subparsers.add_parser(
-        'somatic_call',
-         help='Run somatic callers')
-    parser_somatic_call.add_argument(
+    parser_somatic = subparsers.add_parser(
+        'somatic',
+         help='Conventional somatic calling')
+
+    parser_somatic.add_argument(
         'infile',
         metavar='sample_list.txt',
         help='''Matched sample list file. 
@@ -56,66 +83,51 @@ def main():
         "tumor.bam<tab>normal.bam". 
         Each column should have full path for bam file.
         Trailing columns are ignored.''')
-    parser_somatic_call.add_argument(
+
+    parser_somatic.add_argument(
         '--ref',
         metavar='ref.fasta',
         help='refence.fasta file',
         required=True)
-    parser_somatic_call.add_argument(
+
+    parser_somatic.add_argument(
         '--type',
         choices=['snv', 'indel', 'all'],
         help='variant type')
-    parser_somatic_call.set_defaults(func=somatic_call)
 
-    # ============================
-    # somatic_af command arguments
-    # ============================
+    parser_somatic.set_defaults(func=somatic)
     
-    parser_somatic_af = subparsers.add_parser(
-        'somatic_af',
-         help='Calculate allele frequency for somatic calls')
-    parser_somatic_af.add_argument(
+    # =============================
+    # sensitivity command arguments
+    # =============================
+
+    parser_sensitivity = subparsers.add_parser(
+        'sensitivity',
+        help='''Sensitivity estimation using NA12878''')
+
+    parser_sensitivity.add_argument(
         'infile',
         metavar='sample_list.txt',
-        help='''Matched sample list file. 
-        Each line format is 
-        "clone.bam<tab>tissue.bam" or 
-        "tumor.bam<tab>normal.bam". 
-        Each column should have full path for bam file.
-        Trailing columns are ignored.''')
-    parser_somatic_af.add_argument(
-        '--ref',
-        metavar='ref.fasta',
-        help='refence.fasta file',
-        required=True)
-    parser_somatic_af.add_argument(
-        '--type',
-        choices=['snv', 'indel', 'all'],
-        help='variant type')
-    parser_somatic_af.set_defaults(func=somatic_af)
-    
-    # ==================================
-    # sensitivity_call command arguments
-    # ==================================
-
-    parser_sensitivity_call = subparsers.add_parser(
-        'sensitivity_call',
-        help='''Somatic call using NA12878 bam 
-        for sensitivity estimation''')
-    parser_sensitivity_call.add_argument(
-        'sample_list.txt',
         help='''Sample list file. 
-        Each line format is 
-        "clone.bam<tab>NA12878.bam".''')
-    parser_sensitivity_call.add_argument(
+        This command uses only first column(clone.bam).''')
+
+    parser_sensitivity.add_argument(
         '--ref',
         metavar='ref.fasta',
         help='refence.fasta file',
         required=True)
-    parser_sensitivity_call.add_argument(
+
+    parser_sensitivity.add_argument(
+        '--bam',
+        metavar='na12878.bam',
+        help='na12878.bam file',
+        required=True)
+
+    parser_sensitivity.add_argument(
         '--type',
         choices=['snv', 'indel', 'all'],
         help='variant type')
+    parser_sensitivity.set_defaults(func=sensitivity)
 
     # ===============
     # parse arguments

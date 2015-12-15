@@ -3,10 +3,6 @@ import os
 def make_dir(dir):
     os.makedirs(dir, exist_ok=True)
 
-def make_qdir(subdir=''):
-    make_dir(os.path.join('q.err', subdir))
-    make_dir(os.path.join('q.out', subdir))
-
 def check_dir(dir):
     if os.path.isdir(dir):
         return
@@ -69,34 +65,6 @@ def read_samples(file):
                 raise e(msg)
             samples.append(sample)
         return samples
-
-def read_header(file, n=1):
-    with open(file) as f:
-        while n > 0:
-            yield f.readline()
-            n -= 1
-
-def read_body(file, start=2):
-    with open(file) as f:
-        for line in f:
-            if start > 1:
-                start -= 1
-                continue
-            yield line
-
-def read_vcf_header(vcf):
-    with open(vcf) as f:
-        for line in f:
-            if line[0] != '#':
-                break
-            yield line
-
-def read_vcf_body(vcf):
-    with open(vcf) as f:
-        for line in f:
-            if line[0] == '#':
-                continue
-            yield line
     
 def get_chunk_intervals(fai, chunk_size):
     with open(fai) as f:
@@ -111,5 +79,7 @@ def get_chunk_intervals(fai, chunk_size):
                 intervals.append((chrom, start, end))
         return intervals
 
-def get_samplename(file):
-    return os.path.splitext(os.path.basename(file))[0]
+def get_samplename(clone, tissue):
+    clname = os.path.splitext(os.path.basename(clone))[0]
+    tiname = os.path.splitext(os.path.basename(tissue))[0]
+    return '{}_-_{}'.format(clname, tiname)
