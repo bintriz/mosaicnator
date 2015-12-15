@@ -1,9 +1,6 @@
 #!/bin/bash
-#$ -N run_strelka
 #$ -q 1-day
 #$ -cwd
-#$ -o q.out
-#$ -e q.err
 #$ -pe threaded 16
 
 . ~/.bash_profile > /dev/null

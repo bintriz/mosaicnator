@@ -1,9 +1,6 @@
 #!/bin/bash
-#$ -N run_somaticsniper
 #$ -q 4-days
 #$ -cwd
-#$ -o q.out
-#$ -e q.err
 
 . ~/.bash_profile > /dev/null
 

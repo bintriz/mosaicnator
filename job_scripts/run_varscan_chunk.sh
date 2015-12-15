@@ -1,9 +1,6 @@
 #!/bin/bash
-#$ -N varscan
-#$ -q 4-days
+#$ -q 1-day
 #$ -cwd
-#$ -o q.out
-#$ -e q.err
 #$ -l h_vmem=16G
 
 . ~/.bash_profile > /dev/null

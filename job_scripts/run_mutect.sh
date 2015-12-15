@@ -1,9 +1,6 @@
 #!/bin/bash
-#$ -N mutect
 #$ -q 4-days
 #$ -cwd
-#$ -o q.out
-#$ -e q.err
 #$ -l h_vmem=12G
 
 . ~/.bash_profile > /dev/null
