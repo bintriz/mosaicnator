@@ -4,11 +4,11 @@
 
 . ~/.bash_profile > /dev/null
 
-datadir=$1
-sample=$2
+DATADIR=$1
+SAMPLE=$2
 
 # =======
 # strelka
 # =======
 
-rm -r $datadir/chromosomes
+rm -r $DATADIR/chromosomes

@@ -4,14 +4,14 @@
 
 . ~/.bash_profile > /dev/null
 
-datadir=$1
-sample=$2
+DATADIR=$1
+SAMPLE=$2
 
 # ============================
 # somaticsniper filter out LOH
 # ============================
 
-vcf=$datadir/$sample.somaticsniper.vcf
-outfile=$datadir/$sample.somaticsniper.somatic.vcf
-grep ^# $vcf > $outfile
-grep -v ^# $vcf|perl -ne 'if(/:2:\d+\n/) {print}' >> $outfile
+VCF=$DATADIR/$SAMPLE.somaticsniper.vcf
+OUTFILE=$DATADIR/$SAMPLE.somaticsniper.somatic.vcf
+grep ^# $VCF > $OUTFILE
+grep -v ^# $VCF|perl -ne 'if(/:2:\d+\n/) {print}' >> $OUTFILE

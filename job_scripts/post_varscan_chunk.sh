@@ -5,35 +5,35 @@
 
 . ~/.bash_profile > /dev/null
 
-refidx=$1
-chunksize=$2
-datadir=$3
-sample=$4
+REFIDX=$1
+CHUNKSIZE=$2
+DATADIR=$3
+SAMPLE=$4
 
 # =============
 # varscan merge
 # =============
 
-snpout=$datadir/$sample.varscan.snp
-head -n1 $(ls $datadir/*.varscan.*.snp|head -n1) > $snpout
-indelout=$datadir/$sample.varscan.indel
-head -n1 $(ls $datadir/*.varscan.*.indel|head -n1) > $indelout
+SNPOUT=$DATADIR/$SAMPLE.varscan.snp
+head -n1 $(ls $DATADIR/*.varscan.*.snp|head -n1) > $SNPOUT
+INDELOUT=$DATADIR/$SAMPLE.varscan.indel
+head -n1 $(ls $DATADIR/*.varscan.*.indel|head -n1) > $INDELOUT
 
-for i in $(cat $refidx|cut -f-2|sed 's/\t/:/'); do
-    chrom=${i/:*/}
-    chromsize=${i/*:/}
-    for start in $(seq 1 $chunksize $chromsize); do
-	end=$(($start + $chunksize - 1))
-	if [ $end -gt $chromsize ]; then
-	    end=$chromsize
+for i in $(cat $REFIDX|cut -f-2|sed 's/\t/:/'); do
+    CHROM=${i/:*/}
+    CHROMSIZE=${i/*:/}
+    for START in $(seq 1 $CHUNKSIZE $CHROMSIZE); do
+	END=$(($START + $CHUNKSIZE - 1))
+	if [ $END -gt $CHROMSIZE ]; then
+	    END=$CHROMSIZE
 	fi
-	snpchunk=$datadir/$sample.varscan.$chrom-$start-$end.snp
-	tail -n+2 $snpchunk >> $snpout
-	rm $snpchunk
+	SNPCHUNK=$DATADIR/$SAMPLE.varscan.$CHROM-$START-$END.snp
+	tail -n+2 $SNPCHUNK >> $SNPOUT
+	rm $SNPCHUNK
 	
-	indelchunk=$datadir/$sample.varscan.$chrom-$start-$end.indel
-	tail -n+2 $indelchunk >> $indelout
-	rm $indelchunk
+	INDELCHUNK=$DATADIR/$SAMPLE.varscan.$CHROM-$START-$END.indel
+	tail -n+2 $INDELCHUNK >> $INDELOUT
+	rm $INDELCHUNK
     done
 done
 
@@ -41,5 +41,5 @@ done
 # varscan processSomatic
 # ======================
 
-varscan processSomatic $snpout --p-value 0.05
-varscan processSomatic $indelout --p-value 0.05
+varscan processSomatic $SNPOUT --p-value 0.05
+varscan processSomatic $INDELOUT --p-value 0.05
