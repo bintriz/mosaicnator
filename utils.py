@@ -1,15 +1,17 @@
 import os
+import hashlib
 
-def make_dir(dir):
-    os.makedirs(dir, exist_ok=True)
 
-def check_dir(dir):
-    if os.path.isdir(dir):
+def make_dir(data_dir):
+    os.makedirs(data_dir, exist_ok=True)
+
+def check_dir(data_dir):
+    if os.path.isdir(data_dir):
         return
     else:
-        msg = "Can't find the data directory '{}'".format(dir)
+        msg = "Can't find the data directory '{}'".format(data_dir)
         raise FileNotFoundError(msg)
-        
+
 def check_bam_index(bam_file):
     file_stem = os.path.splitext(bam_file)[0]
     if os.path.isfile(file_stem + '.bai') or os.path.isfile(file_stem + '.bam.bai'):
@@ -33,17 +35,8 @@ def check_ref_dict(fasta_file):
         msg = "Can't find dictionary for the fasta file '{}'".format(fasta_file)
         raise FileNotFoundError(msg)
 
-def check_outfile(file):
-    if not os.path.isfile(file):
-        return
-    else:
-        msg = ("Out file '{}' already exists. "
-               "If you want to rerun, "
-               "the remove old out file first.").format(file)
-        raise FileExistsError(msg)
-
-def read_sample_pairs(file):
-    with open(file) as f:
+def read_sample_pairs(sample_file):
+    with open(sample_file) as f:
         pairs = []
         for line in f:
             try:
@@ -54,8 +47,8 @@ def read_sample_pairs(file):
             pairs.append((clone, tissue))
         return pairs
 
-def read_samples(file):
-    with open(file) as f:
+def read_samples(sample_file):
+    with open(sample_file) as f:
         samples = []
         for line in f:
             try:
@@ -66,8 +59,8 @@ def read_samples(file):
             samples.append(sample)
         return samples
     
-def get_chunk_intervals(fai, chunk_size):
-    with open(fai) as f:
+def get_chunk_intervals(fai_file, chunk_size):
+    with open(fai_file) as f:
         intervals = []
         for line in f:
             chrom, chrom_size = line.split()[:2]
@@ -83,3 +76,15 @@ def get_samplename(clone, tissue):
     clname = os.path.splitext(os.path.basename(clone))[0]
     tiname = os.path.splitext(os.path.basename(tissue))[0]
     return '{}_-_{}'.format(clname, tiname)
+
+def checksum_match(data_file):
+    dirname, filename = os.path.split(data_file)
+    md5_file = '{}/checksum/{}.md5'.format(dirname, filename)
+    if os.path.isfile(data_file) and os.path.isfile(md5_file):
+        with open(data_file) as f:
+            checksum_new = hashlib.md5(f.read().encode('utf-8')).hexdigest()
+        with open(md5_file) as m:
+            checksum_old = m.read().split()[0]
+        return checksum_new == checksum_old
+    else:
+        return False

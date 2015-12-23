@@ -2,98 +2,74 @@
 
 import argparse
 from worker import (
-    SomaticCall,
-    PostProcess,
-    SNVCoord,
-    AlleleFreq,
-    SNVConCall)
+    Somatic,
+    Sensitivity,
+    Pairwise)
 from utils import (
     read_sample_pairs,
     read_samples)
 
-
 def somatic(args):
-    ref = args.ref
-    
-    call = SomaticCall(ref, 'somatic.call')
-    post = PostProcess(ref, 'somatic.call')
-    coord = SNVCoord('somatic.call', 'somatic.AF')
-    freq = AlleleFreq(ref, 'somatic.AF')
-    con = SNVConCall('somatic.AF', 'somatic.out')
-
-    for clone, tissue in read_sample_pairs(args.infile):
-        hold_jid = call.run(clone, tissue)
-        hold_jid = post.run(clone, tissue, hold_jid)
-        hold_jid = coord.run(clone, tissue, hold_jid)
-        hold_jid = freq.run(clone, tissue, hold_jid)
-        con.run(clone, tissue, hold_jid)
+    s = Somatic(args)
+    s.run()
+    s.end_msg()
 
 def sensitivity(args):
-    ref = args.ref
-    tissue = args.bam
-
-    call = SomaticCall(ref, 'sensitivity.call')
-    post = PostProcess(ref, 'sensitivity.call')
-    coord = SNVCoord('sensitivity.call', 'sensitivity.AF')
-    freq = AlleleFreq(ref, 'sensitivity.AF')
-    con = SNVConCall('sensitivity.AF', 'sensitivity.out')
-
-    for clone in read_samples(args.infile):
-        hold_jid = call.run(clone, tissue)
-        hold_jid = post.run(clone, tissue, hold_jid)
-        hold_jid = coord.run(clone, tissue, hold_jid)
-        hold_jid = freq.run(clone, tissue, hold_jid)
-        con.run(clone, tissue, hold_jid)
+    Sensitivity(args).run()
 
 def pairwise(args):
-    ref = args.ref
-    
-    call = SomaticCall(ref, 'pairwise.call')
-    post = PostProcess(ref, 'pairwise.call')
-    coord = SNVCoord('pairwise.call', 'pairwise.AF')
-    freq = AlleleFreq(ref, 'pairwise.AF')
-    con = SNVConCall('pairwise.AF', 'pairwise.out')
+    Pariwise(args).run()
 
-    for clone, tissue in read_samples(args.infile):
-        hold_jid = call.run(clone, tissue)
-        hold_jid = post.run(clone, tissue, hold_jid)
-        hold_jid = coord.run(clone, tissue, hold_jid)
-        hold_jid = freq.run(clone, tissue, hold_jid)
-        con.run(clone, tissue, hold_jid)
-        
 def main():
     parser = argparse.ArgumentParser(
         description='Somatic Mosaic SNV/indel caller')
     subparsers = parser.add_subparsers(help='commands')
+
+    # =================================
+    # Common arguments for all commands
+    # =================================
+    parser_common = argparse.ArgumentParser(add_help=False)
+
+    parser_common.add_argument(
+        '--af', metavar='vaf',
+        help='Variant allele frequency cutoff value (default: 0.35)',
+        type=float, default=0.35)
+
+    parser_common.add_argument(
+        '--no-skip', dest='skip_on', action='store_false',
+        help='''Do not skip. Rerun from the scratch. 
+        (default: skip)''',
+        default=True)
+
+    parser_common.add_argument(
+        '--exome', dest='chunk_on', action='store_false',
+        help='''Do not use chunk as it uses WES data. 
+        (default: WGS data using chunk)''',
+        default=True)
+
+    parser_common.add_argument(
+        '--ref', metavar='ref.fasta',
+        help='refence.fasta file',
+        required=True)
+
+    parser_common.add_argument(
+        'infile', metavar='sample_list.txt',
+        help='''Matched sample list file. 
+        Each line format is 
+        "clone.bam<tab>tissue.bam" or 
+        "tumor.bam<tab>normal.bam". 
+        Each column should have full path for bam file.
+        Trailing columns are ignored. 
+        'sensitivity' or 'pairwise' command uses 
+        only the first column''')
 
     # =========================
     # somatic command arguments
     # =========================
     
     parser_somatic = subparsers.add_parser(
-        'somatic',
+        'somatic', parents=[parser_common],
          help='Conventional somatic calling')
-
-    parser_somatic.add_argument(
-        'infile',
-        metavar='sample_list.txt',
-        help='''Matched sample list file. 
-        Each line format is 
-        "clone.bam<tab>tissue.bam" or 
-        "tumor.bam<tab>normal.bam". 
-        Each column should have full path for bam file.
-        Trailing columns are ignored.''')
-
-    parser_somatic.add_argument(
-        '--ref',
-        metavar='ref.fasta',
-        help='refence.fasta file',
-        required=True)
-
-    parser_somatic.add_argument(
-        '--type',
-        choices=['snv', 'indel', 'all'],
-        help='variant type')
 
     parser_somatic.set_defaults(func=somatic)
     
@@ -102,20 +78,8 @@ def main():
     # =============================
 
     parser_sensitivity = subparsers.add_parser(
-        'sensitivity',
+        'sensitivity', parents=[parser_common],
         help='''Sensitivity estimation using NA12878''')
-
-    parser_sensitivity.add_argument(
-        'infile',
-        metavar='sample_list.txt',
-        help='''Sample list file. 
-        This command uses only first column(clone.bam).''')
-
-    parser_sensitivity.add_argument(
-        '--ref',
-        metavar='ref.fasta',
-        help='refence.fasta file',
-        required=True)
 
     parser_sensitivity.add_argument(
         '--bam',
@@ -123,11 +87,17 @@ def main():
         help='na12878.bam file',
         required=True)
 
-    parser_sensitivity.add_argument(
-        '--type',
-        choices=['snv', 'indel', 'all'],
-        help='variant type')
     parser_sensitivity.set_defaults(func=sensitivity)
+
+    # ========================== 
+    # pairwise command arguments
+    # ==========================
+    
+    parser_pairwise = subparsers.add_parser(
+        'pairwise', parents=[parser_common],
+            help='''All pairwise comparison for clones''')
+
+    parser_pairwise.set_defaults(func=pairwise)
 
     # ===============
     # parse arguments
