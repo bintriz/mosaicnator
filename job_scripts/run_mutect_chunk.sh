@@ -10,7 +10,18 @@ CLONEBAM=$2
 TISSUEBAM=$3
 OUTPREFIX=$4
 INTERVAL=$5
+CHECKSUMDIR=$(dirname $OUTPREFIX)/checksum
+MD5PREFIX=$CHECKSUMDIR/$(basename $OUTPREFIX)
 
-echo "Start:" $(date +"%F %T")
+if [ -f $OUTPREFIX.txt ] && [ -f $MD5PREFIX.txt.md5 ] && \
+       [ "$(md5sum $OUTPREFIX.txt)" = "$(cat $MD5PREFIX.txt.md5)" ]; then
+    echo "$OUTPREFIX.txt exists and matches to the checksum"
+    exit 0
+else
+    rm -rf $OUTPREFIX.txt $MD5PREFIX.txt.md5
+fi
+
 mutect 8 -I:tumor $CLONEBAM -I:normal $TISSUEBAM --out $OUTPREFIX.txt --only_passing_calls -R $REF -L $INTERVAL
-echo "End:" $(date +"%F %T")
+
+mkdir -p $CHECKSUMDIR
+md5sum $OUTPREFIX.txt > $MD5PREFIX.txt.md5

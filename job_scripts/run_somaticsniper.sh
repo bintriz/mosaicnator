@@ -8,7 +8,18 @@ REF=$1
 CLONEBAM=$2
 TISSUEBAM=$3
 OUTPREFIX=$4
+CHECKSUMDIR=$(dirname $OUTPREFIX)/checksum
+MD5PREFIX=$CHECKSUMDIR/$(basename $OUTPREFIX)
 
-echo "Start:" $(date +"%F %T")
+if [ -f $OUTPREFIX.vcf ] && [ -f $MD5PREFIX.vcf.md5 ] && \
+       [ "$(md5sum $OUTPREFIX.vcf)" = "$(cat $MD5PREFIX.vcf.md5)" ]; then
+    echo "$OUTPREFIX.vcf exists and matches to the corresponding checksum."
+    exit 0
+else
+    rm -rf $OUTPREFIX.vcf $MD5PREFIX.vcf.md5
+fi
+
 bam-somaticsniper -q 5 -Q 20 -s 0.000001 -F vcf -f $REF $CLONEBAM $TISSUEBAM $OUTPREFIX.vcf
-echo "End:" $(date +"%F %T")
+
+mkdir -p $CHECKSUMDIR
+md5sum $OUTPREFIX.vcf > $MD5PREFIX.vcf.md5
