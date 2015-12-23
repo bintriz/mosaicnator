@@ -90,9 +90,6 @@ class GridEngineQueue:
         subq_jstate_list = [jinfo['state'] for jinfo in self.__class__._subq.values()]
         return subq_jstate_list.count(jstate)        
 
-    def test_submit(self, q_opt_str, cmd_str):
-        print('qsub {} {}'.format(q_opt_str, cmd_str))
-
     def submit(self, q_opt_str, cmd_str):
         self._allq_wait()
         qsub_cmd_list = ["qsub"] + q_opt_str.split() + cmd_str.split()
