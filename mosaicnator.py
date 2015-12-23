@@ -5,9 +5,6 @@ from worker import (
     Somatic,
     Sensitivity,
     Pairwise)
-from utils import (
-    read_sample_pairs,
-    read_samples)
 
 def somatic(args):
     s = Somatic(args)
