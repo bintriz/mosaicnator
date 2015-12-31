@@ -225,7 +225,7 @@ class Strelka(Caller):
 
     @property
     def call_file_indel(self):
-        return '{}/result/passed.somatic.indels.vcf'.format(self.call_outname)
+        return '{}/results/passed.somatic.indels.vcf'.format(self.call_outname)
 
     @property
     def call_file_ok(self):
