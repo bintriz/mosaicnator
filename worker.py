@@ -14,7 +14,7 @@ class Somatic:
     def __init__(self, args):
         self.sample_file = args.infile
         self.ref = args.ref
-        self.af_cutoff = args.af
+        self.min_af = args.min_AF
         self.skip_on = args.skip_on
         self.chunk_on = args.chunk_on
         self.q = GridEngineQueue()
@@ -57,7 +57,7 @@ class Somatic:
     @property
     def concall_file(self):
         return "{}/{}.snv_call_n4_{}AFcutoff.txt".format(
-            self.out_dir, self.sample_name, str(self.af_cutoff).replace("0.", ""))
+            self.out_dir, self.sample_name, str(self.min_af).replace("0.", ""))
 
     @property
     def concall_file_ok(self):
@@ -104,7 +104,7 @@ class Somatic:
     def _concall(self, hold_jid):
         qopt = self._qopt('con_call', hold_jid)
         cmd =  '{}/snv_con_call.sh {} {} {} {}'.format(
-            self.script_dir, self.sample_name, self.af_cutoff, self.af_dir, self.out_dir)
+            self.script_dir, self.sample_name, self.min_af, self.af_dir, self.out_dir)
         return self.q.submit(qopt, cmd)
 
     def _skip_msg(self, msg):
@@ -161,15 +161,15 @@ class Somatic:
 class Sensitivity(Somatic):
     def __init__(self, args):
         super().__init__(args)
-        self.na12878 = args.bam
+        self.control_bam = args.control_bam
 
     @property
     def sample_list(self):
-        with open(sample_file) as f:
+        with open(self.sample_file) as f:
             for line in f:
                 try:
                     clone = line.split()[0]
-                    yield (clone, self.na12878)
+                    yield (clone, self.control_bam)
                 except ValueError as e:
                     msg = 'Sample list file has empty line.'
                     raise e(msg)
@@ -182,16 +182,16 @@ class Sensitivity(Somatic):
 
     def run(self):
         super().run()
-        for sample in self.hold_jid:
-            hold_jid = self.hold_jid[sample_name]
-            self.sample_name = sample_name
-            self.hold_jid[self.sample_name] = self._sensitivity(hold_jid)
+#         for sample in self.hold_jid:
+#             hold_jid = self.hold_jid[sample_name]
+#             self.sample_name = sample_name
+#             self.hold_jid[self.sample_name] = self._sensitivity(hold_jid)
 
 class Pairwise(Somatic):
     @property
     def sample_list(self):
         clones = []
-        with open(sample_file) as f:
+        with open(self.sample_file) as f:
             for line in f:
                 try:
                     clones.append(line.split()[0])
@@ -202,3 +202,6 @@ class Pairwise(Somatic):
 
     def _exp_score(self):
         pass
+
+    def run(self):
+        super().run()

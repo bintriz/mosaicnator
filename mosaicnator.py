@@ -12,10 +12,14 @@ def somatic(args):
     s.end_msg()
 
 def sensitivity(args):
-    Sensitivity(args).run()
+    s = Sensitivity(args)
+    s.run()
+    s.end_msg()
 
 def pairwise(args):
-    Pariwise(args).run()
+    p = Pairwise(args)
+    p.run()
+    p.end_msg()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -28,37 +32,43 @@ def main():
     parser_common = argparse.ArgumentParser(add_help=False)
 
     parser_common.add_argument(
-        '--af', metavar='vaf',
-        help='Variant allele frequency cutoff value (default: 0.35)',
+        '-f', '--min-AF', metavar='FLOAT',
+        help='AF cutoff value [0.35]',
         type=float, default=0.35)
 
     parser_common.add_argument(
-        '--no-skip', dest='skip_on', action='store_false',
-        help='''Do not skip. Rerun from the scratch. 
-        (default: skip)''',
+        '-q', '--min-MQ', metavar='INT',
+        help='mapQ cutoff value for AF calculation [0]')
+
+    parser_common.add_argument(
+        '-Q', '--min-BQ', metavar='INT',
+        help='baseQ/BAQ cutoff value for AF calculation [13]')
+
+    parser_common.add_argument(
+        '-n', '--no-skip', dest='skip_on', action='store_false',
+        help='Do not skip. Rerun from the scratch. [skip]',
         default=True)
 
     parser_common.add_argument(
-        '--exome', dest='chunk_on', action='store_false',
-        help='''Do not use chunk as it uses WES data. 
-        (default: WGS data using chunk)''',
+        '-e', '--exome', dest='chunk_on', action='store_false',
+        help='Do not use chunk as it uses WES data. [WGS]',
         default=True)
 
     parser_common.add_argument(
-        '--ref', metavar='ref.fasta',
-        help='refence.fasta file',
+        '-r', '--ref', metavar='FILE',
+        help='refence sequence file',
         required=True)
 
     parser_common.add_argument(
         'infile', metavar='sample_list.txt',
         help='''Matched sample list file. 
         Each line format is 
-        "clone.bam<tab>tissue.bam" or 
-        "tumor.bam<tab>normal.bam". 
+        "clone.bam\\ttissue.bam" or 
+        "tumor.bam\\tnormal.bam". 
         Each column should have full path for bam file.
-        Trailing columns are ignored. 
-        'sensitivity' or 'pairwise' command uses 
-        only the first column''')
+        Trailing columns will be ignored. 
+        For 'sensitivity' or 'pairwise' command,  
+        only the first column will be used.''')
 
     # =========================
     # somatic command arguments
@@ -79,10 +89,27 @@ def main():
         help='''Sensitivity estimation using NA12878''')
 
     parser_sensitivity.add_argument(
-        '--bam',
-        metavar='na12878.bam',
-        help='na12878.bam file',
+        '-b', '--control-bam', metavar='FILE',
+        help='na12878 bam file',
         required=True)
+
+    parser_sensitivity.add_argument(
+        '-s', '--control-snp', metavar='FILE',
+        help='''na12878 SNP list. 
+        Each line format is "chr\\tpos\\tref\\talt".
+        Trailing columns will be ignored.''')
+
+    parser_sensitivity.add_argument(
+        '-k', '--g1k-snp', metavar='FILE',
+        help='''1KG SNP list.
+        Each line format is "chr\\tpos\\tref\\talt".
+        Trailing columns will be ignored.''')
+
+    parser_sensitivity.add_argument(
+        '-g', '--germ-het-snp', metavar='FILE',
+        help='''Germline hetero snp list.
+        Each line format is "chr\\tpos\\tref\\talt".
+        Trailing columns will be ignored.''')
 
     parser_sensitivity.set_defaults(func=sensitivity)
 
