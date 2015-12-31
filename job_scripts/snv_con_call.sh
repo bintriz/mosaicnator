@@ -25,7 +25,7 @@ for i in 1 2 3 4; do
     tail -qn+2 $DATADIR/$SAMPLE.{mutect,somaticsniper,strelka,varscan}.snv_AF.txt \
 	|cut -f-5 \
 	|q -t "SELECT c1, c2, c3, c4, c5, count(*) FROM - GROUP BY c1, c2, c3, c4, c5" \
-	|awk -v CALL_N=$i '$6 == call_n' \
+	|awk -v call_n=$i '$6 == call_n' \
 	|cut -f-5 >> $CONCALL
 done
 
