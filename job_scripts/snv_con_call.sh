@@ -35,7 +35,7 @@ CUTOFFMD5=$OUTDIR/checksum/$(basename $CUTOFF).md5
 
 printf "#chr\tpos\tref\talt\tsnv_AF\n" > $CUTOFF
 tail -n+2 $CALL_N4 \
-    |awk -v AF=$AF '$5 >= af' >> $CUTOFF
+    |awk -v af=$AF '$5 >= af' >> $CUTOFF
 
 mkdir -p $(dirname $CUTOFFMD5)
 md5sum $CUTOFF > $CUTOFFMD5
