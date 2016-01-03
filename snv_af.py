@@ -120,10 +120,12 @@ def main():
 
     parser.add_argument(
         '-q', '--min-MQ', metavar='INT',
+        help='mapQ cutoff value [0]',
         type=int, default=0)
 
     parser.add_argument(
         '-Q', '--min-BQ', metavar='INT',
+        help='baseQ/BAQ cutoff value [13]',
         type=int, default=13)
     
     parser.add_argument(
