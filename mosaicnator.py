@@ -38,11 +38,13 @@ def main():
 
     parser_common.add_argument(
         '-q', '--min-MQ', metavar='INT',
-        help='mapQ cutoff value for AF calculation [0]')
+        help='mapQ cutoff value for AF calculation [20]',
+        type=int, default=20)
 
     parser_common.add_argument(
         '-Q', '--min-BQ', metavar='INT',
-        help='baseQ/BAQ cutoff value for AF calculation [13]')
+        help='baseQ/BAQ cutoff value for AF calculation [13]',
+        type=int, default=13)
 
     parser_common.add_argument(
         '-n', '--no-skip', dest='skip_on', action='store_false',
