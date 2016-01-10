@@ -9,10 +9,12 @@ from utils import (
 
 
 class Caller(metaclass=ABCMeta):
-    def __init__(self, ref, prefix, skip_on, chunk_on=False):
+    def __init__(self, ref, prefix, min_MQ, min_BQ, skip_on, chunk_on=False):
         self.ref = ref
         self.refidx = ref + '.fai'
         self.prefix = prefix
+        self.min_MQ = min_MQ
+        self.min_BQ = min_BQ
         self.skip_on = skip_on
         self.chunk_on = chunk_on
         self.chunk_size = 25000000
@@ -146,8 +148,8 @@ class Caller(metaclass=ABCMeta):
 
     def _af(self, hold_jid):
         qopt = self._qopt('af', hold_jid)
-        cmd = '{}/snv_af.sh {} {} {} {} {}'.format(
-            self.script_dir, self.ref, self.clone, self.tissue,
+        cmd = '{}/snv_af.sh {} {} {} {} {} {}'.format(
+            self.script_dir, self.min_MQ, self.min_BQ, self.clone, self.tissue,
             self.coord_file, self.af_file)
         return self.q.submit(qopt, cmd)
 

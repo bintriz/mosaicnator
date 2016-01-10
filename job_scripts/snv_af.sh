@@ -1,16 +1,16 @@
 #!/bin/bash
-#$ -q 1-day
+#$ -q 4-days
 #$ -cwd
-#$ -l h_vmem=12G
 
 . ~/.bash_profile > /dev/null
-plenv shell 5.22.0
 
-REF=$1
-CLONEBAM=$2
-TISSUEBAM=$3
-COORDFILE=$4
-OUTFILE=$5
+MINMQ=$1
+MINBQ=$2
+CLONEBAM=$3
+TISSUEBAM=$4
+COORDFILE=$5
+OUTFILE=$6
+
 COORDMD5=$(dirname $COORDFILE)/checksum/$(basename $COORDFILE).md5
 OUTMD5=$(dirname $OUTFILE)/checksum/$(basename $OUTFILE).md5
 
@@ -20,7 +20,7 @@ if [ ! -f $COORDFILE ] || [ ! -f $COORDMD5 ] || \
     exit 1
 fi
 
-get_AF.pl -r $REF -c $CLONEBAM -t $TISSUEBAM -s $COORDFILE > $OUTFILE
+snv_af.py -c $CLONEBAM -t $TISSUEBAM -q $MINMQ -Q $MINBQ $COORDFILE > $OUTFILE
 
 mkdir -p $(dirname $OUTMD5)
 md5sum $OUTFILE > $OUTMD5

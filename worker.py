@@ -15,6 +15,8 @@ class Somatic:
         self.sample_file = args.infile
         self.ref = args.ref
         self.min_af = args.min_AF
+        self.min_MQ = args.min_MQ
+        self.min_BQ = args.min_BQ
         self.skip_on = args.skip_on
         self.chunk_on = args.chunk_on
         self.q = GridEngineQueue()
@@ -103,8 +105,8 @@ class Somatic:
 
     def _concall(self, hold_jid):
         qopt = self._qopt('con_call', hold_jid)
-        cmd =  '{}/snv_con_call.sh {} {} {} {}'.format(
-            self.script_dir, self.sample_name, self.min_af, self.af_dir, self.out_dir)
+        cmd =  '{}/snv_con_call.sh {} {} {}'.format(
+            self.script_dir, self.min_af, self.af_dir, self.concall_file)
         return self.q.submit(qopt, cmd)
 
     def _skip_msg(self, msg):
@@ -122,10 +124,14 @@ class Somatic:
     def run(self):
         self._check_data()
 
-        mt = MuTect(self.ref, self.worker_name, self.skip_on, self.chunk_on)
-        sn = SomaticSniper(self.ref, self.worker_name, self.skip_on)
-        st = Strelka(self.ref, self.worker_name, self.skip_on)
-        vs = VarScan(self.ref, self.worker_name, self.skip_on, self.chunk_on)
+        mt = MuTect(self.ref, self.worker_name, self.min_MQ, self.min_BQ,
+                    self.skip_on, self.chunk_on)
+        sn = SomaticSniper(self.ref, self.worker_name, self.min_MQ, self.min_BQ,
+                           self.skip_on)
+        st = Strelka(self.ref, self.worker_name, self.min_MQ, self.min_BQ,
+                     self.skip_on)
+        vs = VarScan(self.ref, self.worker_name, self.min_MQ, self.min_BQ,
+                     self.skip_on, self.chunk_on)
 
         for clone, tissue in self.sample_list:
             mt.run(clone, tissue) 
@@ -162,7 +168,10 @@ class Sensitivity(Somatic):
     def __init__(self, args):
         super().__init__(args)
         self.control_bam = args.control_bam
-
+        self.control_snp = args.control_snp
+        self.g1k_snp = args.g1k_snp
+        self.germ_het_snp = args.germ_het_snp
+        
     @property
     def sample_list(self):
         with open(self.sample_file) as f:
@@ -173,19 +182,78 @@ class Sensitivity(Somatic):
                 except ValueError as e:
                     msg = 'Sample list file has empty line.'
                     raise e(msg)
-        
+
+    @property
+    def concall_file(self):
+        return "{}/{}.call_n{{}}.snv_AF.txt".format(
+            self.af_dir, self.sample_name)
+
+    @property
+    def concall_file_ok(self):
+        return self.skip_on and all(
+            [checksum_match(self.concall_file.format(i)) for i in range(1,5)])
+
+    @property
+    def true_file(self):
+        return "{}/germ_het_not_in_NA12878_snp.txt".format(self.out_dir)
+    
+    @property
+    def true_file_ok(self):
+        return self.skip_on and checksum_match(self.true_file)
+
+    @property
+    def sens_file(self):
+        return "{}/{}.snv_sensitivity.txt".format(
+            self.out_dir, self.sample_name)
+    
+    @property
+    def sens_file_ok(self):
+        return self.skip_on and checksum_match(self.sens_file)
+    
+    def _concall(self, hold_jid):
+        qopt = self._qopt('con_call', hold_jid)
+        cmd =  '{}/snv_con_call_for_sensitivity.sh {} {} {}'.format(
+            self.script_dir, self.min_af, self.af_dir, self.sample_name)
+        return self.q.submit(qopt, cmd)
+
+    def _truefile(self):
+        qopt = '-N true_file -e {} -o {}'.format(self.qerr_dir, self.qout_dir)
+        cmd =  '{}/snv_true_file_for_sensitivity.sh {} {} {} {}'.format(
+            self.script_dir, self.control_snp, self.g1k_snp,
+            self.germ_het_snp, self.true_file)
+        return self.q.submit(qopt, cmd)
+    
     def _sensitivity(self, hold_jid):
         qopt = self._qopt('sens', hold_jid)
-        cmd =  '{}/snv_sensitivity.sh {} {}'.format(
-            self.script_dir, self.sample_name, self.out_dir)
+        cmd =  '{}/snv_sensitivity.sh {} {} {} {}'.format(
+            self.script_dir, self.min_af, self.true_file, 
+            self.data_dir, self.sens_file)
         return self.q.submit(qopt, cmd)
 
     def run(self):
         super().run()
-#         for sample in self.hold_jid:
-#             hold_jid = self.hold_jid[sample_name]
-#             self.sample_name = sample_name
-#             self.hold_jid[self.sample_name] = self._sensitivity(hold_jid)
+        
+        # if self.truefile_ok:
+        #     true_jid = ''
+        #     self.sample_name = 'All samples'
+        #     self._skip_msg('truefile')
+        # else:
+        #     true_jid = self._truefile()
+            
+        # for sample_name in self.hold_jid:
+        #     self.sample_name = sample_name
+
+        #     hold_jid = self.hold_jid[sample_name]
+        #     if true_jid != '' and hold_jid == '':
+        #         hold_jid = true_jid  
+        #     elif true_jid != '' and hold_jid != '':
+        #         hold_jid = true_jid + ',' + hold_jid
+
+        #     if self.sens_file_ok:
+        #         self._skip_msg('sens')
+        #     else:
+        #         self._sensitivity(hold_jid)
+        #         self._run_msg('sens')
 
 class Pairwise(Somatic):
     @property
