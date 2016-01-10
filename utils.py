@@ -12,7 +12,10 @@ def checksum_match(data_file):
         with open(data_file) as f:
             checksum_new = hashlib.md5(f.read().encode('utf-8')).hexdigest()
         with open(md5_file) as m:
-            checksum_old = m.read().split()[0]
+            try:
+                checksum_old = m.read().split()[0]
+            except IndexError:
+                checksum_old = ''
         return checksum_new == checksum_old
     else:
         return False
