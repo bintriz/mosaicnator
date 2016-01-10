@@ -99,19 +99,22 @@ def main():
         '-s', '--control-snp', metavar='FILE',
         help='''na12878 SNP list. 
         Each line format is "chr\\tpos\\tref\\talt".
-        Trailing columns will be ignored.''')
+        Trailing columns will be ignored.''',
+        required=True)
 
     parser_sensitivity.add_argument(
         '-k', '--g1k-snp', metavar='FILE',
         help='''1KG SNP list.
         Each line format is "chr\\tpos\\tref\\talt".
-        Trailing columns will be ignored.''')
+        Trailing columns will be ignored.''',
+        required=True)
 
     parser_sensitivity.add_argument(
         '-g', '--germ-het-snp', metavar='FILE',
         help='''Germline hetero snp list.
         Each line format is "chr\\tpos\\tref\\talt".
-        Trailing columns will be ignored.''')
+        Trailing columns will be ignored.''',
+        required=True)
 
     parser_sensitivity.set_defaults(func=sensitivity)
 

@@ -227,33 +227,33 @@ class Sensitivity(Somatic):
         qopt = self._qopt('sens', hold_jid)
         cmd =  '{}/snv_sensitivity.sh {} {} {} {}'.format(
             self.script_dir, self.min_af, self.true_file, 
-            self.data_dir, self.sens_file)
+            self.af_dir, self.sens_file)
         return self.q.submit(qopt, cmd)
 
     def run(self):
         super().run()
         
-        # if self.truefile_ok:
-        #     true_jid = ''
-        #     self.sample_name = 'All samples'
-        #     self._skip_msg('truefile')
-        # else:
-        #     true_jid = self._truefile()
+        if self.true_file_ok:
+            true_jid = ''
+            self.sample_name = 'All samples'
+            self._skip_msg('truefile')
+        else:
+            true_jid = self._truefile()
             
-        # for sample_name in self.hold_jid:
-        #     self.sample_name = sample_name
+        for sample_name in self.hold_jid:
+            self.sample_name = sample_name
 
-        #     hold_jid = self.hold_jid[sample_name]
-        #     if true_jid != '' and hold_jid == '':
-        #         hold_jid = true_jid  
-        #     elif true_jid != '' and hold_jid != '':
-        #         hold_jid = true_jid + ',' + hold_jid
+            hold_jid = self.hold_jid[sample_name]
+            if true_jid != '' and hold_jid == '':
+                hold_jid = true_jid  
+            elif true_jid != '' and hold_jid != '':
+                hold_jid = true_jid + ',' + hold_jid
 
-        #     if self.sens_file_ok:
-        #         self._skip_msg('sens')
-        #     else:
-        #         self._sensitivity(hold_jid)
-        #         self._run_msg('sens')
+            if self.sens_file_ok:
+                self._skip_msg('sens')
+            else:
+                self._sensitivity(hold_jid)
+                self._run_msg('sens')
 
 class Pairwise(Somatic):
     @property
