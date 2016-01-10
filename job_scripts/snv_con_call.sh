@@ -4,10 +4,11 @@
 
 . ~/.bash_profile > /dev/null
 
-SAMPLE=$1
-AF=$2
-DATADIR=$3
-OUTDIR=$4
+AF=$1
+DATADIR=$2
+OUTFILE=$3
+OUTMD5=$(dirname $OUTFILE)/checksum/$(basename $OUTFILE).md5
+SAMPLE=$(basename $OUTFILE .snv_call_n4_${AF/0./}AFcutoff.txt)
 
 for CALLER in mutect somaticsniper strelka varscan; do
     DATAFILE=$DATADIR/$SAMPLE.$CALLER.snv_AF.txt
@@ -24,18 +25,16 @@ for i in 1 2 3 4; do
     printf "#chr\tpos\tref\talt\tsnv_AF\n" > $CONCALL
     tail -qn+2 $DATADIR/$SAMPLE.{mutect,somaticsniper,strelka,varscan}.snv_AF.txt \
 	|cut -f-5 \
-	|q -t "SELECT c1, c2, c3, c4, c5, count(*) FROM - GROUP BY c1, c2, c3, c4, c5" \
-	|awk -v call_n=$i '$6 == call_n' \
-	|cut -f-5 >> $CONCALL
+	|sort -k1,1V -k2,2n \
+	|uniq -c
+	|awk -v n=$i '$1 == n {print $2"\t"$3"\t"$4"\t"$5"\t"$6}' >> $CONCALL
 done
 
 CALL_N4=$DATADIR/$SAMPLE.call_n4.snv_AF.txt
-CUTOFF=$OUTDIR/$SAMPLE.snv_call_n4_${AF/0./}AFcutoff.txt
-CUTOFFMD5=$OUTDIR/checksum/$(basename $CUTOFF).md5
 
-printf "#chr\tpos\tref\talt\tsnv_AF\n" > $CUTOFF
+printf "#chr\tpos\tref\talt\tsnv_AF\n" > $OUTFILL
 tail -n+2 $CALL_N4 \
-    |awk -v af=$AF '$5 >= af' >> $CUTOFF
+    |awk -v af=$AF '$5 >= af' >> $OUTFILE
 
-mkdir -p $(dirname $CUTOFFMD5)
-md5sum $CUTOFF > $CUTOFFMD5
+mkdir -p $(dirname $OUTMD5)
+md5sum $OUTFILE > $OUTMD5
