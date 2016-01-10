@@ -1,6 +1,7 @@
 #!/bin/bash
 #$ -q 1-day
 #$ -cwd
+#$ -l h_vmem=8G
 
 . ~/.bash_profile > /dev/null
 
@@ -25,7 +26,7 @@ for i in 1 2 3 4; do
     printf "#chr\tpos\tref\talt\tsnv_AF\n" > $CONCALL
     tail -qn+2 $DATADIR/$SAMPLE.{mutect,somaticsniper,strelka,varscan}.snv_AF.txt \
 	|cut -f-5 \
-	|sort -k1,1V -k2,2n \
+	|sort -k1,1V -k2,2n -S7G \
 	|uniq -c
 	|awk -v n=$i '$1 == n {print $2"\t"$3"\t"$4"\t"$5"\t"$6}' >> $CONCALL
 done
