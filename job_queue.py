@@ -95,7 +95,7 @@ class GridEngineQueue:
         qsub_cmd_list = ["qsub"] + q_opt_str.split() + cmd_str.split()
         stdout = subprocess.check_output(qsub_cmd_list).decode('utf-8')
 
-        jid = stdout.split()[2]
+        jid = stdout.split()[2].split('.')[0]
         jname = (stdout.split()[3])[2:-2]
         self.__class__._subq[jid] = {'name':jname}
 

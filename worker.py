@@ -14,11 +14,14 @@ class Somatic:
     def __init__(self, args):
         self.sample_file = args.infile
         self.ref = args.ref
+        self.refidx = args.ref + '.fai'
         self.min_af = args.min_AF
         self.min_MQ = args.min_MQ
         self.min_BQ = args.min_BQ
         self.skip_on = args.skip_on
-        self.chunk_on = args.chunk_on
+        if args.chunk_on:
+            self.chunk_size = 25000000
+            self._chunkfile()
         self.q = GridEngineQueue()
         self.script_dir = '{}/job_scripts'.format(
             os.path.dirname(os.path.realpath(__file__)))
@@ -56,6 +59,10 @@ class Somatic:
                     msg = 'Sample list file should have at least 2 columns.'
                     raise e(msg)
 
+    @property
+    def chunk_file(self):
+        return '{}.call/chunk_regions.txt'.format(self.worker_name)
+    
     @property
     def concall_file(self):
         return "{}/{}.snv_call_n4_{}AFcutoff.txt".format(
@@ -103,6 +110,19 @@ class Somatic:
         else:
             return qopt + ' -hold_jid {}'.format(hold_jid)
 
+    def _chunkfile(self):
+        make_dir(os.path.dirname(self.chunk_file))
+        with open(self.chunk_file, 'w') as out:
+            with open(self.refidx) as f:
+                for line in f:
+                    chrom, chrom_size = line.split()[:2]
+                    chrom_size = int(chrom_size)
+                    for start in range(1, chrom_size, self.chunk_size):
+                        end = start + self.chunk_size - 1
+                        if end > chrom_size:
+                            end = chrom_size
+                        out.write('{}:{}-{}\n'.format(chrom, start, end))
+
     def _concall(self, hold_jid):
         qopt = self._qopt('con_call', hold_jid)
         cmd =  '{}/snv_con_call.sh {} {} {}'.format(
@@ -124,14 +144,22 @@ class Somatic:
     def run(self):
         self._check_data()
 
-        mt = MuTect(self.ref, self.worker_name, self.min_MQ, self.min_BQ,
-                    self.skip_on, self.chunk_on)
-        sn = SomaticSniper(self.ref, self.worker_name, self.min_MQ, self.min_BQ,
-                           self.skip_on)
-        st = Strelka(self.ref, self.worker_name, self.min_MQ, self.min_BQ,
-                     self.skip_on)
-        vs = VarScan(self.ref, self.worker_name, self.min_MQ, self.min_BQ,
-                     self.skip_on, self.chunk_on)
+        mt = MuTect(
+            self.ref, self.worker_name,
+            self.min_MQ, self.min_BQ,
+            self.skip_on, self.chunk_file)
+        sn = SomaticSniper(
+            self.ref, self.worker_name,
+            self.min_MQ, self.min_BQ,
+            self.skip_on)
+        st = Strelka(
+            self.ref, self.worker_name,
+            self.min_MQ, self.min_BQ,
+            self.skip_on)
+        vs = VarScan(
+            self.ref, self.worker_name,
+            self.min_MQ, self.min_BQ,
+            self.skip_on, self.chunk_file)
 
         for clone, tissue in self.sample_list:
             mt.run(clone, tissue) 
@@ -140,12 +168,12 @@ class Somatic:
             vs.run(clone, tissue)
 
         for sample_name in mt.hold_jid:
-            hold_jid = ','.join([jid
-                                 for jid in [mt.hold_jid[sample_name],
-                                             sn.hold_jid[sample_name],
-                                             st.hold_jid[sample_name],
-                                             vs.hold_jid[sample_name]]
-                                 if jid != ''])
+            hold_jid = ','.join(
+                [jid for jid in [mt.hold_jid[sample_name],
+                                 sn.hold_jid[sample_name],
+                                 st.hold_jid[sample_name],
+                                 vs.hold_jid[sample_name]]
+                 if jid != ''])
             self.sample_name = sample_name
 
             if self.concall_file_ok:

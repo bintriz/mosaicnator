@@ -9,15 +9,13 @@ from utils import (
 
 
 class Caller(metaclass=ABCMeta):
-    def __init__(self, ref, prefix, min_MQ, min_BQ, skip_on, chunk_on=False):
+    def __init__(self, ref, prefix, min_MQ, min_BQ, skip_on, chunk_file=None):
         self.ref = ref
-        self.refidx = ref + '.fai'
         self.prefix = prefix
         self.min_MQ = min_MQ
         self.min_BQ = min_BQ
         self.skip_on = skip_on
-        self.chunk_on = chunk_on
-        self.chunk_size = 25000000
+        self.chunk_file = chunk_file
         self.q = GridEngineQueue()
         self.script_dir = '{}/job_scripts'.format(
             os.path.dirname(os.path.realpath(__file__)))
@@ -41,7 +39,7 @@ class Caller(metaclass=ABCMeta):
     @property
     def qout_dir(self):
         return 'q.out/{}.{}'.format(self.sample_name, self.caller_name)
-
+    
     @property
     def call_dir(self):
         return '{}.call/{}.{}'.format(
@@ -55,7 +53,7 @@ class Caller(metaclass=ABCMeta):
     def call_outname(self):
         return '{}/{}.{}'.format(
             self.call_dir, self.sample_name, self.caller_name)
-
+    
     @property
     @abstractmethod
     def call_file(self):
@@ -80,17 +78,9 @@ class Caller(metaclass=ABCMeta):
         return self.skip_on and checksum_match(self.af_file)
 
     @property
-    def intervals(self):
-        with open(self.refidx) as f:
-            for line in f:
-                chrom, chrom_size = line.split()[:2]
-                chrom_size = int(chrom_size)
-                for start in range(1, chrom_size, self.chunk_size):
-                    end = start + self.chunk_size - 1
-                    if end > chrom_size:
-                        end = chrom_size
-                    yield (chrom, start, end)
-
+    def chunk_n(self):
+        return sum(1 for line in open(self.chunk_file))
+    
     def _qopt(self, jprefix, hold_jid=''):
         qopt = '-N {}_{}.{} -e {} -o {}'.format(
             jprefix, self.caller_name, self.sample_name, self.qerr_dir, self.qout_dir)
@@ -99,46 +89,32 @@ class Caller(metaclass=ABCMeta):
         else:
             return qopt + ' -hold_jid {}'.format(hold_jid)
 
-    def _call_chunk(self):
-        jids = []
-        for chrom, start, end in self.intervals:
-            chunktag = '{}-{}-{}'.format(chrom, start, end)
-            interval = '{}:{}-{}'.format(chrom, start, end)
-            qopt = '-N run_{}.{}.{} -e {} -o {}'.format(
-                self.caller_name, self.sample_name, chunktag,
-                self.qerr_dir, self.qout_dir)
-            cmd = '{}/run_{}_chunk.sh {} {} {} {}.{} {}'.format(
-                self.script_dir, self.caller_name,
-                self.ref, self.clone, self.tissue, 
-                self.call_outname, chunktag, interval)
-            jids.append(self.q.submit(qopt, cmd))
-        return ','.join(jids)
-
     def _call(self):
-        if self.chunk_on:
-            return self._call_chunk()
+        qopt = self._qopt('run')
+        if self.chunk_file is not None:
+            qopt = qopt + ' -t 1-{}'.format(self.chunk_n)
+            cmd = '{}/run_{}_chunk.sh {} {} {} {} {}'.format(
+                self.script_dir, self.caller_name,
+                self.ref, self.clone, self.tissue,
+                self.call_outname, self.chunk_file)
         else:
-            qopt = self._qopt('run')
             cmd = '{}/run_{}.sh {} {} {} {}'.format(
                 self.script_dir, self.caller_name,
-                self.ref, self.clone, self.tissue, self.call_outname)
-            return self.q.submit(qopt, cmd)
-
-    def _post_chunk(self, hold_jid):
-        qopt = self._qopt('post', hold_jid)
-        cmd = '{}/post_{}_chunk.sh {} {} {}'.format(
-            self.script_dir, self.caller_name,
-            self.refidx, self.chunk_size, self.call_outname)
+                self.ref, self.clone, self.tissue,
+                self.call_outname)
         return self.q.submit(qopt, cmd)
 
     def _post(self, hold_jid):
-        if self.chunk_on:
-            return self._post_chunk(hold_jid)
+        qopt = self._qopt('post', hold_jid)
+        if self.chunk_file is not None:
+            cmd = '{}/post_{}_chunk.sh {} {}'.format(
+                self.script_dir, self.caller_name,
+                self.call_outname, self.chunk_file)
         else:
-            qopt = self._qopt('post', hold_jid)
             cmd = '{}/post_{}.sh {}'.format(
-                self.script_dir, self.caller_name, self.call_outname)
-            return self.q.submit(qopt, cmd)
+                self.script_dir, self.caller_name,
+                self.call_outname)
+        return self.q.submit(qopt, cmd)
             
     def _coord(self, hold_jid):
         qopt = self._qopt('coord', hold_jid)
@@ -172,23 +148,25 @@ class Caller(metaclass=ABCMeta):
         self.clone = clone
         self.tissue = tissue
         
-        make_dir(self.qerr_dir)
-        make_dir(self.qout_dir)
-        make_dir(self.call_dir)
-        
         hold_jid = ''
+        
         if self.call_file_ok:
             self._skip_msg('calling')
         else:
+            make_dir(self.qerr_dir)
+            make_dir(self.qout_dir)
+            make_dir(self.call_dir)        
             hold_jid = self._call()
             hold_jid = self._post(hold_jid)
             self._run_msg('calling')
+
         if self.af_file_ok:
             self._skip_msg('af_calc')
         else:
             hold_jid = self._coord(hold_jid)
             hold_jid = self._af(hold_jid)
             self._run_msg('af_calc')
+
         self.hold_jid[self.sample_name] = hold_jid
         
 class MuTect(Caller):
