@@ -25,7 +25,12 @@ else
     rm -rf $OUTPREFIX.snp $MD5PREFIX.snp.md5 $OUTPREFIX.indel $MD5PREFIX.indel.md5
 fi
 
-samtools mpileup -f $REF -r $INTERVAL $TISSUEBAM $CLONEBAM|varscan 8 somatic --mpileup $OUTPREFIX
+if [ $(samtools view -c $TISSUEBAM $INTERVAL) = 0 ] && \
+       [ $(samtools view -c $CLONEBAM $INTERVAL) = 0 ]; then
+    touch $OUTPREFIX.snp $OUTPREFIX.indel
+else
+    samtools mpileup -f $REF -r $INTERVAL $TISSUEBAM $CLONEBAM|varscan 8 somatic --mpileup $OUTPREFIX
+fi
 
 mkdir -p $CHECKSUMDIR
 md5sum $OUTPREFIX.snp > $MD5PREFIX.snp.md5
