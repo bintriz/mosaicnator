@@ -167,7 +167,7 @@ class Somatic:
             st.run(clone, tissue)
             vs.run(clone, tissue)
 
-        for sample_name in mt.hold_jid:
+        for sample_name in sorted(mt.hold_jid):
             hold_jid = ','.join(
                 [jid for jid in [mt.hold_jid[sample_name],
                                  sn.hold_jid[sample_name],
@@ -190,7 +190,7 @@ class Somatic:
         print('\x1b[2K', end='\r')
         print('-' * 59)
         print('\x1b[2K', end='\r')
-        print('mosaicnator.py submitted {} jobs in total.'.format(self.q.n_submit))
+        print('mosaicnator.py submitted {} jobs in total.'.format(self.q.j_total))
 
 class Sensitivity(Somatic):
     def __init__(self, args):
@@ -268,7 +268,7 @@ class Sensitivity(Somatic):
         else:
             true_jid = self._truefile()
             
-        for sample_name in self.hold_jid:
+        for sample_name in sorted(self.hold_jid):
             self.sample_name = sample_name
 
             hold_jid = self.hold_jid[sample_name]
