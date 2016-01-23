@@ -16,7 +16,7 @@ CHECKSUMDIR=$(dirname $OUTPREFIX)/checksum
 MD5PREFIX=$CHECKSUMDIR/$(basename $OUTPREFIX)
 
 if [ -f $OUTPREFIX.txt ] && [ -f $MD5PREFIX.txt.md5 ] && \
-       [ "$(md5sum $OUTPREFIX.txt)" = "$(cat $MD5PREFIX.txt.md5)" ]; then
+       [ "$(md5sum $OUTPREFIX.txt|cut -f1 -d' ')" = "$(cut -f -d' ' $MD5PREFIX.txt.md5)" ]; then
     echo "$OUTPREFIX.txt exists and matches to the checksum"
     exit 0
 else

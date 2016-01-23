@@ -16,7 +16,7 @@ for i in 1 2 3 4; do
     DATAFILE=$DATADIR/$SAMPLE.call_n$i.snv_AF.txt
     DATAMD5=$DATADIR/checksum/$(basename $DATAFILE).md5
     if [ ! -f $DATAFILE ] || [ ! -f $DATAMD5 ] || \
-	   [ "$(md5sum $DATAFILE)" != "$(cat $DATAMD5)" ]; then
+	   [ "$(md5sum $DATAFILE|cut -f1 -d' ')" != "$(cut -f1 -d' ' $DATAMD5)" ]; then
 	echo "$DATAFILE doesn't exist or doesn't match to the checksum."
 	exit 1
     fi

@@ -15,7 +15,7 @@ COORDMD5=$(dirname $COORDFILE)/checksum/$(basename $COORDFILE).md5
 OUTMD5=$(dirname $OUTFILE)/checksum/$(basename $OUTFILE).md5
 
 if [ ! -f $COORDFILE ] || [ ! -f $COORDMD5 ] || \
-       [ "$(md5sum $COORDFILE)" != "$(cat $COORDMD5)" ]; then
+       [ "$(md5sum $COORDFILE|cut -f1 -d' ')" != "$(cut -f1 -d' ' $COORDMD5)" ]; then
     echo "$COORDFILE doesn't exist or doesn't match to the checksum."
     exit 1
 fi

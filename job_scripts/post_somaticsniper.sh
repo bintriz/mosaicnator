@@ -11,7 +11,7 @@ OUTFILE=$PREFIX.somatic.vcf
 OUTMD5=$(dirname $PREFIX)/checksum/$(basename $PREFIX).somatic.vcf.md5
 
 if [ ! -f $VCF ] || [ ! -f $VCFMD5 ] || \
-       [ "$(md5sum $VCF)" != "$(cat $VCFMD5)" ]; then
+       [ "$(md5sum $VCF|cut -f1 -d' ')" != "$(cut -f1 -d' ' $VCFMD5)" ]; then
     echo "$VCF doesn't exist or doesn't match to the ckesksum"
     exit 1
 fi

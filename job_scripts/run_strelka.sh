@@ -15,9 +15,9 @@ SNVSMD5=$OUTPREFIX/results/checksum/passed.somatic.snvs.vcf.md5
 INDELSMD5=$OUTPREFIX/results/checksum/passed.somatic.indels.vcf.md5
 
 if [ -f $SNVS ] && [ -f $SNVSMD5 ] && \
-       [ "$(md5sum $SNVS)" = "$(cat $SNVSMD5)" ] && \
+       [ "$(md5sum $SNVS|cut -f1 -d' ')" = "$(cut -f1 -d' ' $SNVSMD5)" ] && \
        [ -f $INDELS ] && [ -f $INDELSMD5 ] && \
-       [ "$(md5sum $INDELS)" = "$(cat $INDELSMD5)" ]; then
+       [ "$(md5sum $INDELS|cut -f1 -d' ')" = "$(cut -f -d' ' $INDELSMD5)" ]; then
     echo "$OUTPREFIX/results/passed.somatic.*.vcf exist and match to the corresponding checksum."
     exit 0
 else

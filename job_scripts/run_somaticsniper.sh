@@ -12,7 +12,7 @@ CHECKSUMDIR=$(dirname $OUTPREFIX)/checksum
 MD5PREFIX=$CHECKSUMDIR/$(basename $OUTPREFIX)
 
 if [ -f $OUTPREFIX.vcf ] && [ -f $MD5PREFIX.vcf.md5 ] && \
-       [ "$(md5sum $OUTPREFIX.vcf)" = "$(cat $MD5PREFIX.vcf.md5)" ]; then
+       [ "$(md5sum $OUTPREFIX.vcf|cut -f1 -d' ')" = "$(cut -f1 -d' ' $MD5PREFIX.vcf.md5)" ]; then
     echo "$OUTPREFIX.vcf exists and matches to the corresponding checksum."
     exit 0
 else

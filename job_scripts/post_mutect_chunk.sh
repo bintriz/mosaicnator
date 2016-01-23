@@ -21,7 +21,7 @@ for INTERVAL in $(cat $CHUNKFILE); do
     CHUNKMD5=$MD5PREFIX.${INTERVAL/:/-}.txt.md5
     
     if [ -f $CHUNKFILE ] && [ -f $CHUNKMD5 ] && \
-	   [ "$(md5sum $CHUNKFILE)" = "$(cat $CHUNKMD5)" ]; then
+	   [ "$(md5sum $CHUNKFILE|cut -f1 -d' ')" = "$(cut -f1 -d' ' $CHUNKMD5)" ]; then
 	tail -n+3 $CHUNKFILE |grep KEEP$ >> $OUTFILE
     else
 	echo "$CHUNKFILE doesn't exist or doesn't match to the checksum."

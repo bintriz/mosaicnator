@@ -23,7 +23,7 @@ for INTERVAL in $(cat $CHUNKFILE); do
     SNPCHUNKMD5=$MD5PREFIX.${INTERVAL/:/-}.snp.md5
     
     if [ -f $SNPCHUNK ] && [ -f $SNPCHUNKMD5 ] && \
-	   [ "$(md5sum $SNPCHUNK)" = "$(cat $SNPCHUNKMD5)" ]; then
+	   [ "$(md5sum $SNPCHUNK|cut -f1 -d' ')" = "$(cut -f1 -d' ' $SNPCHUNKMD5)" ]; then
 	tail -n+2 $SNPCHUNK >> $SNPOUT
     else
 	echo "$SNPCHUNK doesn't exist or doesn't match to the checksum."
@@ -34,7 +34,7 @@ for INTERVAL in $(cat $CHUNKFILE); do
     INDELCHUNKMD5=$MD5PREFIX.${INTERVAL/:/-}.indel.md5
 	
     if [ -f $INDELCHUNK ] && [ -f $INDELCHUNKMD5 ] && \
-	   [ "$(md5sum $INDELCHUNK)" = "$(cat $INDELCHUNKMD5)" ]; then
+	   [ "$(md5sum $INDELCHUNK|cut -f1 -d' ')" = "$(cut -f1 -d' ' $INDELCHUNKMD5)" ]; then
 	tail -n+2 $INDELCHUNK >> $INDELOUT
     else
 	echo "$INDELCHUNK doesn't exist or doen't match to the checksum."
