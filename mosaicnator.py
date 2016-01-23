@@ -1,4 +1,4 @@
-#!/data2/external_data/Abyzov_Alexej_m124423/apps/pyenv/versions/3.5.0/bin/python
+#!/data2/external_data/Abyzov_Alexej_m124423/apps/pyenv/versions/3.5.1/bin/python
 
 import argparse
 from worker import (
@@ -9,17 +9,14 @@ from worker import (
 def somatic(args):
     s = Somatic(args)
     s.run()
-    s.end_msg()
 
 def sensitivity(args):
     s = Sensitivity(args)
     s.run()
-    s.end_msg()
 
 def pairwise(args):
     p = Pairwise(args)
     p.run()
-    p.end_msg()
 
 def main():
     parser = argparse.ArgumentParser(

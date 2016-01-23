@@ -3,7 +3,10 @@ from itertools import permutations
 from job_queue import GridEngineQueue
 from utils import (
     make_dir,
-    checksum_match)
+    checksum_match,
+    skip_msg,
+    run_msg,
+    end_msg)
 from caller import (
     MuTect,
     SomaticSniper,
@@ -16,21 +19,49 @@ class Somatic:
         self.ref = args.ref
         self.refidx = args.ref + '.fai'
         self.min_af = args.min_AF
-        self.min_MQ = args.min_MQ
-        self.min_BQ = args.min_BQ
         self.skip_on = args.skip_on
+        self.caller = [
+            SomaticSniper(
+                self.ref, self.worker_name, args.min_MQ, args.min_BQ,
+                self.skip_on),
+            Strelka(
+                self.ref, self.worker_name, args.min_MQ, args.min_BQ,
+                self.skip_on)]
+        
         if args.chunk_on:
             self.chunk_size = 25000000
             self._chunkfile()
+            self.caller.extend([
+                MuTect(
+                    self.ref, self.worker_name, args.min_MQ, args.min_BQ,
+                    self.skip_on, self.chunk_file),
+                VarScan(
+                    self.ref, self.worker_name, args.min_MQ, args.min_BQ,
+                    self.skip_on, self.chunk_file)])
+        else:
+            self.caller.extend([
+                MuTect(
+                    self.ref, self.worker_name, args.min_MQ, args.min_BQ,
+                    self.skip_on),
+                VarScan(
+                    self.ref, self.worker_name, args.min_MQ, args.min_BQ,
+                    self.skip_on)])
+            
         self.q = GridEngineQueue()
         self.script_dir = '{}/job_scripts'.format(
             os.path.dirname(os.path.realpath(__file__)))
         self.hold_jid = {}
-        make_dir(self.out_dir)
+        self._prepare_dir()
 
     @property
     def worker_name(self):
         return type(self).__name__.lower()
+
+    @property
+    def sample_name(self):
+        clname = os.path.splitext(os.path.basename(self.clone))[0]
+        tiname = os.path.splitext(os.path.basename(self.tissue))[0]
+        return '{}_-_{}'.format(clname, tiname)
 
     @property
     def qerr_dir(self):
@@ -50,14 +81,16 @@ class Somatic:
 
     @property
     def sample_list(self):
+        pairs = set()
         with open(self.sample_file) as f:
             for line in f:
                 try:
                     clone, tissue = line.split()[:2]
-                    yield (clone, tissue)
+                    pairs.add((clone, tissue))
                 except ValueError as e:
                     msg = 'Sample list file should have at least 2 columns.'
                     raise e(msg)
+        return pairs
 
     @property
     def chunk_file(self):
@@ -65,8 +98,8 @@ class Somatic:
     
     @property
     def concall_file(self):
-        return "{}/{}.snv_call_n4_{}AFcutoff.txt".format(
-            self.out_dir, self.sample_name, str(self.min_af).replace("0.", ""))
+        return '{}/{}.snv_call_n4_{}AFcutoff.txt'.format(
+            self.out_dir, self.sample_name, str(self.min_af).replace('0.', ''))
 
     @property
     def concall_file_ok(self):
@@ -96,6 +129,9 @@ class Somatic:
             msg = "Can't find index for the bam file '{}'".format(bam)
             raise FileNotFoundError(msg)
 
+    def _prepare_dir(self):
+        make_dir(self.out_dir)
+        
     def _check_data(self):
         self._check_ref(self.ref)
         for clone, tissue in self.sample_list:
@@ -129,69 +165,39 @@ class Somatic:
             self.script_dir, self.min_af, self.af_dir, self.concall_file)
         return self.q.submit(qopt, cmd)
 
-    def _skip_msg(self, msg):
-        print('\x1b[2A', end='\r')
-        print('\x1b[2K', end='\r')
-        print('Skip {:>16} job: {}\n\n'.format(
-            msg, self.sample_name))
+    def _skip_msg(self, jname):
+        if self.q.__class__.is_1st_print:
+            self.q.__class__.is_1st_print = False
+        else:
+            print('\x1b[2A', end='\r')
+        skip_msg(jname, '{}.all'.format(self.sample_name))
 
-    def _run_msg(self, msg):
-        print('\x1b[2A', end='\r')
-        print('\x1b[2K', end='\r')
-        print('Submitted {:>11} job: {}\n\n'.format(
-            msg, self.sample_name))
+    def _run_msg(self, jname):
+        run_msg(jname, '{}.all'.format(self.sample_name))
 
+    def _run(self):
+        hold_jid = ''
+        if self.concall_file_ok:
+            self._skip_msg('calling')
+            self._skip_msg('af_calc')
+            self._skip_msg('con_call')
+        else:
+            make_dir(self.qerr_dir)
+            make_dir(self.qout_dir)
+            jids = (caller.run(self.clone, self.tissue) for caller in self.caller)
+            hold_jid = ','.join(jid for jid in jids if jid != '')
+            hold_jid = self._concall(hold_jid)
+            self._run_msg('con_call')
+        return hold_jid
+            
     def run(self):
         self._check_data()
-
-        mt = MuTect(
-            self.ref, self.worker_name,
-            self.min_MQ, self.min_BQ,
-            self.skip_on, self.chunk_file)
-        sn = SomaticSniper(
-            self.ref, self.worker_name,
-            self.min_MQ, self.min_BQ,
-            self.skip_on)
-        st = Strelka(
-            self.ref, self.worker_name,
-            self.min_MQ, self.min_BQ,
-            self.skip_on)
-        vs = VarScan(
-            self.ref, self.worker_name,
-            self.min_MQ, self.min_BQ,
-            self.skip_on, self.chunk_file)
-
         for clone, tissue in self.sample_list:
-            mt.run(clone, tissue) 
-            sn.run(clone, tissue)
-            st.run(clone, tissue)
-            vs.run(clone, tissue)
-
-        for sample_name in sorted(mt.hold_jid):
-            hold_jid = ','.join(
-                [jid for jid in [mt.hold_jid[sample_name],
-                                 sn.hold_jid[sample_name],
-                                 st.hold_jid[sample_name],
-                                 vs.hold_jid[sample_name]]
-                 if jid != ''])
-            self.sample_name = sample_name
-
-            if self.concall_file_ok:
-                self.hold_jid[self.sample_name] = ''
-                self._skip_msg('con_call')
-            else:
-                make_dir(self.qerr_dir)
-                make_dir(self.qout_dir)
-                self.hold_jid[self.sample_name] = self._concall(hold_jid)
-                self._run_msg('con_call')
-
-    def end_msg(self):
-        print('\x1b[2A', end='\r')
-        print('\x1b[2K', end='\r')
-        print('-' * 59)
-        print('\x1b[2K', end='\r')
-        print('mosaicnator.py submitted {} jobs in total.'.format(self.q.j_total))
-
+            self.clone = clone
+            self.tissue = tissue
+            self._run()
+        end_msg(self.q.j_total)
+        
 class Sensitivity(Somatic):
     def __init__(self, args):
         super().__init__(args)
@@ -200,20 +206,30 @@ class Sensitivity(Somatic):
         self.g1k_snp = args.g1k_snp
         self.germ_het_snp = args.germ_het_snp
         
+        if self.true_file_ok:
+            self.true_jid = ''
+            self.q.__class__.is_1st_print = False
+            skip_msg('truefile', 'For all samples')
+        else:
+            self.true_jid = self._truefile()
+            run_msg('truefile', 'For all samples')
+            
     @property
     def sample_list(self):
+        pairs = set()
         with open(self.sample_file) as f:
             for line in f:
                 try:
                     clone = line.split()[0]
-                    yield (clone, self.control_bam)
+                    pairs.add((clone, self.control_bam))
                 except ValueError as e:
                     msg = 'Sample list file has empty line.'
                     raise e(msg)
+        return pairs
 
     @property
     def concall_file(self):
-        return "{}/{}.call_n{{}}.snv_AF.txt".format(
+        return '{}/{}.call_n{{}}.snv_AF.txt'.format(
             self.af_dir, self.sample_name)
 
     @property
@@ -223,7 +239,7 @@ class Sensitivity(Somatic):
 
     @property
     def true_file(self):
-        return "{}/germ_het_not_in_NA12878_snp.txt".format(self.out_dir)
+        return '{}/germ_het_not_in_NA12878_snp.txt'.format(self.out_dir)
     
     @property
     def true_file_ok(self):
@@ -237,7 +253,7 @@ class Sensitivity(Somatic):
     @property
     def sens_file_ok(self):
         return self.skip_on and checksum_match(self.sens_file)
-    
+
     def _concall(self, hold_jid):
         qopt = self._qopt('con_call', hold_jid)
         cmd =  '{}/snv_con_call_for_sensitivity.sh {} {} {}'.format(
@@ -245,7 +261,7 @@ class Sensitivity(Somatic):
         return self.q.submit(qopt, cmd)
 
     def _truefile(self):
-        qopt = '-N true_file -e {} -o {}'.format(self.qerr_dir, self.qout_dir)
+        qopt = '-N true_file -e q.err -o q.out'
         cmd =  '{}/snv_true_file_for_sensitivity.sh {} {} {} {}'.format(
             self.script_dir, self.control_snp, self.g1k_snp,
             self.germ_het_snp, self.true_file)
@@ -258,46 +274,87 @@ class Sensitivity(Somatic):
             self.af_dir, self.sens_file)
         return self.q.submit(qopt, cmd)
 
-    def run(self):
-        super().run()
-        
-        if self.true_file_ok:
-            true_jid = ''
-            self.sample_name = 'All samples'
-            self._skip_msg('truefile')
+    def _run(self):
+        if self.sens_file_ok:
+            self._skip_msg('calling')
+            self._skip_msg('af_calc')
+            self._skip_msg('con_call')
+            self._skip_msg('sens')
         else:
-            true_jid = self._truefile()
+            make_dir(self.qerr_dir)
+            make_dir(self.qout_dir)
             
-        for sample_name in sorted(self.hold_jid):
-            self.sample_name = sample_name
+            hold_jid = super._run()
+            if hold_jid == '':
+                hold_jid = self.true_jid
+            elif self.true_jid != '':
+                hold_jid += ',' + self.true_jid
+                
+            self._sensitivity(hold_jid)
+            self._run_msg('sens')
 
-            hold_jid = self.hold_jid[sample_name]
-            if true_jid != '' and hold_jid == '':
-                hold_jid = true_jid  
-            elif true_jid != '' and hold_jid != '':
-                hold_jid = true_jid + ',' + hold_jid
-
-            if self.sens_file_ok:
-                self._skip_msg('sens')
-            else:
-                self._sensitivity(hold_jid)
-                self._run_msg('sens')
-
-class Pairwise(Somatic):
+class Pairwise(Somatic):    
     @property
     def sample_list(self):
-        clones = []
+        clones = set()
         with open(self.sample_file) as f:
             for line in f:
                 try:
-                    clones.append(line.split()[0])
+                    clones.add(line.split()[0])
                 except ValueError as e:
                     msg = 'Sample list file has empty line.'
                     raise e(msg)
         return permutations(clones, 2)
 
-    def _exp_score(self):
-        pass
+    @property
+    def concall_dir(self):
+        return '{}/concall'.format(self.out_dir)
+
+    @property
+    def concall_file(self):
+        return '{}/{}.snv_call_n4_{}AFcutoff.txt'.format(
+            self.concall_dir, self.sample_name, str(self.min_af).replace('0.', ''))
+
+    @property
+    def expscore_file(self):
+        return '{}/union.snv_call_n4_{}AFcutoff.explanation_score.txt'.format(
+            self.out_fie, str(self.min_af).replace('0.',''))
+    @property
+    def expscore_file_ok(self):
+        return self.skip_on and checksum_match(self.expscore_file)
+
+    def _prepare_dir(self):
+        make_dir(self.concall_dir)
+        
+    def _expscore(self, hold_jid):
+        concall_flist = '{}/concall_list.snv_call_n4_{}AFcutoff.txt'.format(
+            self.out_dir, str(self.min_af).replace('0.',''))
+        with open(concall_flist, 'w') as out:
+            for clone, tissue in self.sample_list:
+                self.clone = clone
+                self.tissue = tissue
+                out.write(self.concall_file + '\n')
+        qopt = '-N exp_score -e q.err -o q.out'
+        if hold_jid == '':
+            qopt += ' -hold_jid {}'.format(hold_jid)
+        cmd =  '{}/exp_score.sh {} {}'.format(
+            self.script_dir, concall_flist, self.expscore_file)
+        return self.q.submit(qopt, cmd)
 
     def run(self):
-        super().run()
+        if expscore_file_ok:
+            self._skip_msg('calling')
+            self._skip_msg('af_calc')
+            self._skip_msg('con_call')
+            self._skip_msg('expscore')
+        else:
+            self._check_data()
+            jids = []
+            for clone, tissue in self.sample_list:
+                self.clone = clone
+                self.tissue = tissue
+                jids.append(super()._run())
+            hold_jid = ','.join(jid for jid in jids if jid != '')
+            self._expscore(hold_jid)
+            self._run_msg('expscore')
+            end_msg(self.q.j_total)

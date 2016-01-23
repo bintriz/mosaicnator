@@ -19,3 +19,19 @@ def checksum_match(data_file):
         return checksum_new == checksum_old
     else:
         return False
+
+def skip_msg(jname, msg):
+    print('\x1b[2K', end='\r')
+    print('Skip {:>16} job: {}\n\n'.format(jname, msg))
+
+def run_msg(jname, msg):
+    print('\x1b[2A', end='\r')
+    print('\x1b[2K', end='\r')
+    print('Submitted {:>11} job: {}\n\n'.format(jname, msg))
+
+def end_msg(jtotal):
+    print('\x1b[2A', end='\r')
+    print('\x1b[2K', end='\r')
+    print('-' * 59)
+    print('\x1b[2K', end='\r')
+    print('mosaicnator.py submitted {} jobs in total.'.format(jtotal))

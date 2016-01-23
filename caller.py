@@ -5,7 +5,9 @@ from abc import (
 from job_queue import GridEngineQueue
 from utils import (
     make_dir,
-    checksum_match)
+    checksum_match,
+    skip_msg,
+    run_msg)
 
 
 class Caller(metaclass=ABCMeta):
@@ -19,7 +21,6 @@ class Caller(metaclass=ABCMeta):
         self.q = GridEngineQueue()
         self.script_dir = '{}/job_scripts'.format(
             os.path.dirname(os.path.realpath(__file__)))
-        self.hold_jid = {}
         make_dir(self.af_dir)
 
     @property
@@ -129,46 +130,42 @@ class Caller(metaclass=ABCMeta):
             self.coord_file, self.af_file)
         return self.q.submit(qopt, cmd)
 
-    def _skip_msg(self, msg):
+    def _skip_msg(self, jname):
         if self.q.__class__.is_1st_print:
             self.q.__class__.is_1st_print = False
         else:
             print('\x1b[2A', end='\r')
-        print('\x1b[2K', end='\r')
-        print('Skip {:>16} job: {}.{}\n\n'.format(
-            msg, self.sample_name, self.caller_name))
+        skip_msg(jname, '{}.{}'.format(self.sample_name, self.caller_name))
 
-    def _run_msg(self, msg):
-        print('\x1b[2A', end='\r')
-        print('\x1b[2K', end='\r')
-        print('Submitted {:>11} job: {}.{}\n\n'.format(
-            msg, self.sample_name, self.caller_name))
-
+    def _run_msg(self, jname):
+        run_msg(jname, '{}.{}'.format(self.sample_name, self.caller_name))
+        
     def run(self, clone, tissue):
         self.clone = clone
         self.tissue = tissue
         
         hold_jid = ''
-        
-        if self.call_file_ok:
-            self._skip_msg('calling')
-        else:
-            make_dir(self.qerr_dir)
-            make_dir(self.qout_dir)
-            make_dir(self.call_dir)        
-            hold_jid = self._call()
-            hold_jid = self._post(hold_jid)
-            self._run_msg('calling')
 
         if self.af_file_ok:
+            self._skip_msg('calling')
             self._skip_msg('af_calc')
         else:
+            if self.call_file_ok:
+                self._skip_msg('calling')
+            else:
+                make_dir(self.qerr_dir)
+                make_dir(self.qout_dir)
+                make_dir(self.call_dir)        
+                hold_jid = self._call()
+                hold_jid = self._post(hold_jid)
+                self._run_msg('calling')
+                
             hold_jid = self._coord(hold_jid)
             hold_jid = self._af(hold_jid)
             self._run_msg('af_calc')
 
-        self.hold_jid[self.sample_name] = hold_jid
-        
+        return hold_jid
+
 class MuTect(Caller):
     @property
     def call_file(self):
