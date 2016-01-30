@@ -284,7 +284,7 @@ class Sensitivity(Somatic):
             make_dir(self.qerr_dir)
             make_dir(self.qout_dir)
             
-            hold_jid = super._run()
+            hold_jid = super()._run()
             if hold_jid == '':
                 hold_jid = self.true_jid
             elif self.true_jid != '':
