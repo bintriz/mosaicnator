@@ -247,8 +247,8 @@ class Sensitivity(Somatic):
 
     @property
     def sens_file(self):
-        return "{}/{}.snv_sensitivity.txt".format(
-            self.out_dir, self.sample_name)
+        return "{}/{}.snv_sensitivity_{}AFcutoff.txt".format(
+            self.out_dir, self.sample_name, str(self.min_af).replace('0.', ''))
     
     @property
     def sens_file_ok(self):
