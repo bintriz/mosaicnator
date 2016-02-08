@@ -340,7 +340,7 @@ class Pairwise(Somatic):
                 self.clone = clone
                 self.tissue = tissue
                 out.write(self.concall_file + '\n')
-        qopt = '-N exp_score -e q.err -o q.out'
+        qopt = '-N expl_score -e q.err -o q.out'
         if hold_jid == '':
             qopt += ' -hold_jid {}'.format(hold_jid)
         cmd =  '{}/expl_score.sh {} {}'.format(
