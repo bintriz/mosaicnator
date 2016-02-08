@@ -341,7 +341,7 @@ class Pairwise(Somatic):
                 self.tissue = tissue
                 out.write(self.concall_file + '\n')
         qopt = '-N expl_score -e q.err -o q.out'
-        if hold_jid == '':
+        if hold_jid != '':
             qopt += ' -hold_jid {}'.format(hold_jid)
         cmd =  '{}/expl_score.sh {} {}'.format(
             self.script_dir, concall_flist, self.explscore_file)
