@@ -294,6 +294,10 @@ class Sensitivity(Somatic):
             self._run_msg('sens')
 
 class Pairwise(Somatic):    
+    def __init__(self, args):
+        super().__init__(args)
+        self.out_prefix = args.out_prefix + '-'
+
     @property
     def sample_list(self):
         clones = set()
@@ -316,19 +320,19 @@ class Pairwise(Somatic):
             self.concall_dir, self.sample_name, str(self.min_af).replace('0.', ''))
 
     @property
-    def expscore_file(self):
-        return '{}/union.snv_call_n4_{}AFcutoff.explanation_score.txt'.format(
-            self.out_fie, str(self.min_af).replace('0.',''))
+    def explscore_file(self):
+        return '{}/{}pairwise_snv_union.snv_call_n4_{}AFcutoff.explanation_score.txt'.format(
+            self.out_dir, self.out_prefix, str(self.min_af).replace('0.',''))
     @property
-    def expscore_file_ok(self):
-        return self.skip_on and checksum_match(self.expscore_file)
+    def explscore_file_ok(self):
+        return self.skip_on and checksum_match(self.explscore_file)
 
     def _prepare_dir(self):
         make_dir(self.concall_dir)
         
-    def _expscore(self, hold_jid):
-        concall_flist = '{}/concall_list.snv_call_n4_{}AFcutoff.txt'.format(
-            self.out_dir, str(self.min_af).replace('0.',''))
+    def _explscore(self, hold_jid):
+        concall_flist = '{}/{}concall_list.snv_call_n4_{}AFcutoff.txt'.format(
+            self.out_dir, self.out_prefix, str(self.min_af).replace('0.',''))
         with open(concall_flist, 'w') as out:
             for clone, tissue in self.sample_list:
                 self.clone = clone
@@ -337,16 +341,16 @@ class Pairwise(Somatic):
         qopt = '-N exp_score -e q.err -o q.out'
         if hold_jid == '':
             qopt += ' -hold_jid {}'.format(hold_jid)
-        cmd =  '{}/exp_score.sh {} {}'.format(
-            self.script_dir, concall_flist, self.expscore_file)
+        cmd =  '{}/expl_score.sh {} {}'.format(
+            self.script_dir, concall_flist, self.explscore_file)
         return self.q.submit(qopt, cmd)
 
     def run(self):
-        if expscore_file_ok:
+        if self.explscore_file_ok:
             self._skip_msg('calling')
             self._skip_msg('af_calc')
             self._skip_msg('con_call')
-            self._skip_msg('expscore')
+            self._skip_msg('expl_score')
         else:
             self._check_data()
             jids = []
@@ -355,6 +359,6 @@ class Pairwise(Somatic):
                 self.tissue = tissue
                 jids.append(super()._run())
             hold_jid = ','.join(jid for jid in jids if jid != '')
-            self._expscore(hold_jid)
-            self._run_msg('expscore')
+            self._explscore(hold_jid)
+            self._run_msg('expl_score')
             end_msg(self.q.j_total)

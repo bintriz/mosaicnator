@@ -123,6 +123,11 @@ def main():
         'pairwise', parents=[parser_common],
             help='''All pairwise comparison for clones''')
 
+    parser_pairwise.add_argument(
+        '-o', '--out-prefix', metavar='STR',
+        help='''Prefix string for out file. ['']''',
+        type=str, default='')
+    
     parser_pairwise.set_defaults(func=pairwise)
 
     # ===============
