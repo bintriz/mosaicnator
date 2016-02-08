@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -q 1-days
+#$ -q 1-day
 #$ -cwd
 
 . ~/.bash_profile > /dev/null
