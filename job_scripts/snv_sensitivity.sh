@@ -10,7 +10,8 @@ TRUEFILE=$2
 DATADIR=$3
 OUTFILE=$4
 OUTMD5=$(dirname $OUTFILE)/checksum/$(basename $OUTFILE).md5
-SAMPLE=$(basename $OUTFILE .snv_sensitivity.txt)
+SAMPLE=$(basename $OUTFILE)
+SAMPLE=${SAMPLE/.snv_sensitivity_*AFcutoff.txt}
 
 for i in 1 2 3 4; do
     DATAFILE=$DATADIR/$SAMPLE.call_n$i.snv_AF.txt
