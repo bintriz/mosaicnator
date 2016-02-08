@@ -296,7 +296,9 @@ class Sensitivity(Somatic):
 class Pairwise(Somatic):    
     def __init__(self, args):
         super().__init__(args)
-        self.out_prefix = args.out_prefix + '-'
+        self.out_prefix = args.out_prefix
+        if self.out_prefix != '':
+            self.out_prefix += '-'
 
     @property
     def sample_list(self):
