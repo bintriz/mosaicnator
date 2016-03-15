@@ -363,8 +363,8 @@ class Pairwise(Somatic):
 
     @property
     def explscore_file(self):
-        return '{}/{}pairwise_{}_union.{}_call_n{}_{}AFcutoff.explanation_score.txt'.format(
-            self.out_dir, self.out_prefix, self.var_type, self.var_type,
+        return '{}/{}pairwise_union.{}_call_n{}_{}AFcutoff.expl_score.txt'.format(
+            self.out_dir, self.out_prefix, self.var_type,
             len(self.caller), str(self.min_af).replace('0.',''))
     @property
     def explscore_file_ok(self):
