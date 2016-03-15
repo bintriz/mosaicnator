@@ -7,16 +7,16 @@ from worker import (
     Pairwise)
 
 def somatic(args):
-    s = Somatic(args)
-    s.run()
+        s = Somatic(args)
+        s.run()
 
 def sensitivity(args):
     s = Sensitivity(args)
     s.run()
 
 def pairwise(args):
-    p = Pairwise(args)
-    p.run()
+    s = Pairwise(args)
+    s.run()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -45,18 +45,23 @@ def main():
 
     parser_common.add_argument(
         '-n', '--no-skip', dest='skip_on', action='store_false',
-        help='Do not skip. Rerun from the scratch. [skip]',
+        help='Do not skip. Rerun from the scratch. [off]',
         default=True)
 
     parser_common.add_argument(
         '-e', '--exome', dest='chunk_on', action='store_false',
-        help='Do not use chunk as it uses WES data. [WGS]',
+        help='Do not use chunk as it uses WES data. [off]',
         default=True)
 
     parser_common.add_argument(
         '-r', '--ref', metavar='FILE',
         help='refence sequence file',
         required=True)
+
+    parser_common.add_argument(
+        '-v', '--var', metavar='', dest='var_type',
+        help='Variant type for calling. [snv]',
+        choices=['snv', 'indel'], default='snv')
 
     parser_common.add_argument(
         'infile', metavar='sample_list.txt',
@@ -93,22 +98,22 @@ def main():
         required=True)
 
     parser_sensitivity.add_argument(
-        '-s', '--control-snp', metavar='FILE',
-        help='''na12878 SNP list. 
+        '-c', '--control-var', metavar='FILE',
+        help='''na12878 SNP or INDEL list. 
         Each line format is "chr\\tpos\\tref\\talt".
         Trailing columns will be ignored.''',
         required=True)
 
     parser_sensitivity.add_argument(
-        '-k', '--g1k-snp', metavar='FILE',
-        help='''1KG SNP list.
+        '-k', '--g1k-var', metavar='FILE',
+        help='''1KG SNP or INDEL list.
         Each line format is "chr\\tpos\\tref\\talt".
         Trailing columns will be ignored.''',
         required=True)
 
     parser_sensitivity.add_argument(
-        '-g', '--germ-het-snp', metavar='FILE',
-        help='''Germline hetero snp list.
+        '-g', '--germ-het-var', metavar='FILE',
+        help='''Germline hetero SNP or INDEL list.
         Each line format is "chr\\tpos\\tref\\talt".
         Trailing columns will be ignored.''',
         required=True)
