@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -q 1-day
 #$ -cwd
-#$ -l h_vmem=24G
+#$ -l h_vmem=32G
 
 . ~/.bash_profile > /dev/null
 
