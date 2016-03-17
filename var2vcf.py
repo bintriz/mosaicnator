@@ -10,8 +10,7 @@ from tempfile import NamedTemporaryFile
 def generic_parse(line):
     values = line.strip().split()
     chrom, pos, ref, alt = values[:4]
-    info = "."
-    return chrom, pos, ref, alt, info
+    return "{}\t{}\t.\t{}\t{}\t.\t.\t.".format(chrom, pos, ref, alt)
 
 def varscan_parse(line, header):
     values = line.strip().split()
@@ -24,18 +23,18 @@ def varscan_parse(line, header):
         alt = alt.replace('-', ref)
         ref, alt = alt, ref
 
-    return chrom, pos, ref, alt, info
+    return "{}\t{}\t.\t{}\t{}\t.\t.\t{}".format(chrom, pos, ref, alt, info)
 
 def vcf_header_generic():
     vcf_header = "##fileformat=VCFv4.2" + "\n" + \
-                 "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"
+            "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"
     return vcf_header
 
 def vcf_header_varscan(header):
     info_header = "\n".join(["##INFO=<ID=%s,Number=1,Type=String,Description=\"VarScan output\">" % x for x in header[4:]])
     vcf_header = "##fileformat=VCFv4.2" + "\n" + \
-                 info_header + "\n" + \
-                 "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"
+            info_header + "\n" + \
+            "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"
     return vcf_header
 
 def main():
@@ -45,27 +44,50 @@ def main():
     parser = argparse.ArgumentParser(description='VCF converter for VarScan output file')
 
     parser.add_argument('infile' , nargs='?',
-                        type=argparse.FileType('rt'), default=sys.stdin,
-                        help='''
-                        Input variant file. 
-                        It should include CHROM, POS, REF, and ALT as the first 4 columns for generic format. 
-                        If this is ommited, default is STDIN.
-                        ''')
+            type=argparse.FileType('rt'), default=sys.stdin,
+            help='''
+            Input variant file. 
+            It should include CHROM, POS, REF, and ALT as the first 4 columns for generic format. 
+            If this is ommited, default is STDIN.
+            ''')
     parser.add_argument('outfile', nargs='?',
-                        type=argparse.FileType('wt'), default=sys.stdout,
-                        help='''
-                        Output vcf file.
-                        If this is ommited, default is STDOUT.
-                        ''')
+            type=argparse.FileType('wt'), default=sys.stdout,
+            help='''
+            Output vcf file.
+            If this is ommited, default is STDOUT.
+            ''')
     parser.add_argument('-d', '--seq-dict', required=True,
-                        dest='seq_dict', action='store',
-                        help='Sequence dictionary needed to sort vcf')
+            dest='seq_dict', action='store',
+            help='Sequence dictionary needed to sort vcf')
     parser.add_argument('-f', '--format', required=True,
-                        dest='format', choices=['generic', 'varscan'],
-                        help='''
-                        Input file format. 
-                        No header is assumed for generic format.
-                        ''')
+            dest='format', choices=['generic', 'varscan'],
+            help='''
+            Input file format. 
+            No header is assumed for generic format.
+            ''')
+
+    class CondAction(argparse._StoreAction):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            x = kwargs.pop('to_be_required', [])
+            super(CondAction, self).__init__(option_strings, dest, **kwargs)
+            self.make_required = x
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            for x in self.make_required:
+                x.required = True
+            try:
+                return super(CondAction, self).__call__(
+                        parser, namespace, values, option_string)
+            except NotImplementedError:
+                pass
+
+    x = parser.add_argument('-s', '--sample-name',
+            dest='sample_name',
+            help='It\'s needed when you assign default genotype.')
+
+    parser.add_argument('-g', '--genotype',
+            dest='gt', action=CondAction, to_be_required=[x], 
+            help='Assign default genotype for all snps.')
 
     try:
         args = parser.parse_args()
@@ -78,21 +100,28 @@ def main():
     if(args.format == 'generic'):
         line_parse = generic_parse
         vcf_header = vcf_header_generic()
-        
+
     elif(args.format == 'varscan'):
         header = args.infile.readline().strip().split()
         line_parse = lambda x: varscan_parse(x, header)
         vcf_header = vcf_header_varscan(header)
+
+    if(args.gt == None):
+        sample_gt = ""
+
+    else:
+        sample_gt = "\tGT\t" + args.gt
+        vcf_header += "\tFORMAT\t" + args.sample_name
 
     ##
     ## Make Vcf
     ##
     with NamedTemporaryFile('wt', delete=False) as f_tmp:
         print(vcf_header, file=f_tmp)
-        
+
         for line in args.infile:
-            print("%s\t%s\t.\t%s\t%s\t.\t.\t%s" % line_parse(line), file=f_tmp)
-            
+            print(line_parse(line) + sample_gt, file=f_tmp)
+
     args.infile.close()
 
     ##
@@ -100,7 +129,7 @@ def main():
     ##
     try:
         subprocess.check_call(["picard", "SortVcf", "CREATE_INDEX=false",
-                               "I=" + f_tmp.name, "O=" + f_tmp.name + ".vcf", "SD=" + args.seq_dict])
+            "I=" + f_tmp.name, "O=" + f_tmp.name + ".vcf", "SD=" + args.seq_dict])
     finally:
         os.remove(f_tmp.name)
 
