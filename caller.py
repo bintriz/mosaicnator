@@ -79,7 +79,10 @@ class Caller(metaclass=ABCMeta):
 
     @property
     def chunk_n(self):
-        return sum(1 for line in open(self.chunk_file))
+        n = sum(1 for line in open(self.chunk_file))
+        if n == 0:
+            raise RuntimeError("{} has no chunk info. Delete it and rerun.".format(self.chunk_file))
+        return n
     
     def _qopt(self, jprefix, hold_jid=''):
         qopt = '-N {}_{}.{} -e {} -o {}'.format(
