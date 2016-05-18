@@ -48,7 +48,7 @@ def main():
             help='''
             Input variant file. 
             It should include CHROM, POS, REF, and ALT as the first 4 columns for generic format. 
-            If this is ommited, default is STDIN.
+            If this is omitted, default is STDIN.
             ''')
     parser.add_argument('outfile', nargs='?',
             type=argparse.FileType('wt'), default=sys.stdout,
