@@ -1,7 +1,8 @@
 #!/bin/bash
 #$ -cwd
 
-. ~/.bash_profile > /dev/null
+BIN_PATH="$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/../.."
+source $BIN_PATH/job.config
 
 REF=$1
 CLONEBAM=$2
@@ -12,27 +13,26 @@ THREADS=$6
 
 INTERVAL=$(awk "NR==${SGE_TASK_ID}" $CHUNKFILE)
 OUTDIR=$OUTPREFIX.${INTERVAL/:/-}
-OUTFILE=$OUTDIR/somatic.5x.indel.vcf.gz
-VCFFILE=$OUTDIR/somatic.5x.indel.vcf
+OUT=$OUTDIR/somatic.5x.indel.vcf.gz
+VCF=$OUTDIR/somatic.5x.indel.vcf
 CHECKSUMDIR=$OUTDIR/checksum
-OUTMD5=$CHECKSUMDIR/$(basename $OUTFILE).md5
+OUTMD5=$CHECKSUMDIR/$(basename $OUT).md5
 
-if [ -f $OUTFILE ] && [ -f $OUTMD5 ] && \
-       [ "$(md5sum $OUTFILE|cut -f1 -d' ')" = "$(cut -f1 -d' ' $OUTMD5)" ]; then
-    echo "$OUTFILE exist and match to the corresponding checksum."
-    exit 0
+if [[ -f $OUT && -f $OUTMD5 && \
+        $(md5sum $OUT|cut -f1 -d' ') = \
+        $(cut -f1 -d' ' $OUTMD5) ]]; then
+    echo "$OUT exist and match to the corresponding checksum."
 else
     rm -rf $OUTDIR
+    $SCALPEL --somatic --tumor $CLONEBAM --normal $TISSUEBAM --bed $INTERVAL --dir $OUTDIR \
+        --ref $REF --numproc $THREADS --two-pass --window 600
+    if [[ $? = 0 ]]; then
+        if [[ -f $VCF ]]; then
+            bgzip -c $VCF > $OUT
+        else
+            bgzip -c $OUTDIR/main/somatic.5x.indel.vcf > $OUT
+        fi
+        mkdir -p $CHECKSUMDIR
+        md5sum $OUT > $OUTMD5
+    fi
 fi
-
-scalpel --somatic --tumor $CLONEBAM --normal $TISSUEBAM --bed $INTERVAL --dir $OUTDIR \
-	--ref $REF --numproc $THREADS --two-pass --window 600
-
-if [ -f $VCFFILE ]; then
-    bgzip -c $VCFFILE > $OUTFILE
-else
-    bgzip -c $OUTDIR/main/somatic.5x.indel.vcf > $OUTFILE
-fi
-
-mkdir -p $CHECKSUMDIR
-md5sum $OUTFILE > $OUTMD5

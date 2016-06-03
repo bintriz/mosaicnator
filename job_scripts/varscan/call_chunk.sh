@@ -3,7 +3,10 @@
 #$ -cwd
 #$ -l h_vmem=16G
 
-. ~/.bash_profile > /dev/null
+BIN_PATH="$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/../.."
+source $BIN_PATH/job.config
+
+VARSCAN="$JAVA -Xmx8g -jar $VARSCAN_JAR"
 
 REF=$1
 CLONEBAM=$2
@@ -15,23 +18,25 @@ OUTPREFIX=$OUTPREFIX.${INTERVAL/:/-}
 CHECKSUMDIR=$(dirname $OUTPREFIX)/checksum
 MD5PREFIX=$CHECKSUMDIR/$(basename $OUTPREFIX)
 
-if [ -f $OUTPREFIX.snp ] && [ -f $MD5PREFIX.snp.md5 ] && \
-       [ "$(md5sum $OUTPREFIX.snp|cut -f1 -d' ')" = "$(cut -f1 -d' ' $MD5PREFIX.snp.md5)" ] && \
-       [ -f $OUTPREFIX.indel ] && [ -f $MD5PREFIX.indel.md5 ] && \
-       [ "$(md5sum $OUTPREFIX.indel|cut -f1 -d' ')" = "$(cut -f1 -d' ' $MD5PREFIX.indel.md5)" ]; then
+if [[ -f $OUTPREFIX.snp && -f $MD5PREFIX.snp.md5 && \
+        $(md5sum $OUTPREFIX.snp|cut -f1 -d' ') = \
+        $(cut -f1 -d' ' $MD5PREFIX.snp.md5) && \
+        -f $OUTPREFIX.indel && -f $MD5PREFIX.indel.md5 && \
+        $(md5sum $OUTPREFIX.indel|cut -f1 -d' ') = \
+        $(cut -f1 -d' ' $MD5PREFIX.indel.md5) ]]; then
     echo "$OUTPREFIX.snp/indel exist and match to the corresponding checksum."
-    exit 0
 else
-    rm -rf $OUTPREFIX.snp $MD5PREFIX.snp.md5 $OUTPREFIX.indel $MD5PREFIX.indel.md5
+    rm -f $OUTPREFIX.snp $MD5PREFIX.snp.md5 $OUTPREFIX.indel $MD5PREFIX.indel.md5
+    if [[ $($SAMTOOLS view -c $TISSUEBAM $INTERVAL) = 0 && \
+            $($SAMTOOLS view -c $CLONEBAM $INTERVAL) = 0 ]]; then
+        touch $OUTPREFIX.snp $OUTPREFIX.indel
+    else
+        $SAMTOOLS mpileup -f $REF -r $INTERVAL $TISSUEBAM $CLONEBAM \
+            |$VARSCAN somatic --mpileup $OUTPREFIX
+    fi
+    if [[ $? = 0 ]]; then
+        mkdir -p $CHECKSUMDIR
+        md5sum $OUTPREFIX.snp > $MD5PREFIX.snp.md5
+        md5sum $OUTPREFIX.indel > $MD5PREFIX.indel.md5
+    fi
 fi
-
-if [ $(samtools view -c $TISSUEBAM $INTERVAL) = 0 ] && \
-       [ $(samtools view -c $CLONEBAM $INTERVAL) = 0 ]; then
-    touch $OUTPREFIX.snp $OUTPREFIX.indel
-else
-    samtools mpileup -f $REF -r $INTERVAL $TISSUEBAM $CLONEBAM|varscan 8 somatic --mpileup $OUTPREFIX
-fi
-
-mkdir -p $CHECKSUMDIR
-md5sum $OUTPREFIX.snp > $MD5PREFIX.snp.md5
-md5sum $OUTPREFIX.indel > $MD5PREFIX.indel.md5
