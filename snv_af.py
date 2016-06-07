@@ -5,7 +5,15 @@ import fileinput
 import re
 import subprocess
 import sys
+import os
 
+
+config = os.path.dirname(os.path.realpath(__file__)) + "/job.config"
+with open(config) as f:
+    for line in f:
+        if line[:8] == "SAMTOOLS":
+            exec(line)
+            break
 
 def print_af(args):
     af_routines = [calc_af(pileup(args.clone, args.min_MQ, args.min_BQ, clean(count())))]
@@ -42,7 +50,7 @@ def calc_af(target):
             af = alt_n / total
         except ZeroDivisionError:
             af = 0
-        result = '{:f}\t{}\t{}\t{}\t{A},{C},{G},{T},{a},{c},{g},{t},{dels}'.format(
+        result = '{:f}\t{}\t{}\t{}\tA={A},C={C},G={G},T={T},a={a},c={c},g={g},t={t},dels={dels}'.format(
             af, total, ref_n, alt_n, **base_n)
 
 @coroutine
@@ -50,7 +58,7 @@ def pileup(bam, min_MQ, min_BQ, target):
     result = None
     while True:
         chrom, pos = (yield result)
-        cmd = ['samtools', 'mpileup', '-d', '8000',
+        cmd = [SAMTOOLS, 'mpileup', '-d', '8000',
                '-q', str(min_MQ), '-Q', str(min_BQ),
                '-r', '{}:{}-{}'.format(chrom, pos, pos), bam]
         try:
@@ -132,7 +140,7 @@ def main():
         'infile', metavar='snv_list.txt',
         help='''SNV list.
         Each line format is "chr\\tpos\\t\\tref\\alt".
-        Trailing columns will be ignored.''',
+        Trailing columns will be ignored. [STDIN]''',
         nargs='?', type=argparse.FileType('r'),
         default=sys.stdin)
 
