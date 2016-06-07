@@ -63,18 +63,20 @@ fi
 # Main
 out_vcf=$out_name.decomp.norm.uniq.vcf.gz
 out_log=$out_name.decomp.norm.uniq.log
+config=$(readlink -f ${BASH_SOURCE[0]})/job.config
+eval $(grep ^VT $config)
 
 if [ ! -z $sflag ]; then
     $CATCMD $in_vcf \
-	|vt sort - \
-	|vt decompose                - 2> $out_log.tmp1 \
-	|vt normalize -r $ref $nflag - 2> $out_log.tmp2 \
-	|vt uniq      -o $out_vcf    - 2> $out_log.tmp3	  
+	|$VT sort - \
+	|$VT decompose                - 2> $out_log.tmp1 \
+	|$VT normalize -r $ref $nflag - 2> $out_log.tmp2 \
+	|$VT uniq      -o $out_vcf    - 2> $out_log.tmp3	  
 else
     $CATCMD $in_vcf \
-	|vt decompose                - 2> $out_log.tmp1 \
-	|vt normalize -r $ref $nflag - 2> $out_log.tmp2 \
-	|vt uniq      -o $out_vcf    - 2> $out_log.tmp3
+	|$VT decompose                - 2> $out_log.tmp1 \
+	|$VT normalize -r $ref $nflag - 2> $out_log.tmp2 \
+	|$VT uniq      -o $out_vcf    - 2> $out_log.tmp3
 fi
 
 cat $out_log.tmp{1,2,3} |tee $out_log
