@@ -1,11 +1,20 @@
 #!/data2/external_data/Abyzov_Alexej_m124423/apps/pyenv/versions/3.5.1/bin/python
 
-
 import argparse
 import os
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
+
+
+config = os.path.dirname(os.path.realpath(__file__)) + "/job.config"
+with open(config) as f:
+    for line in f:
+        if line[:5] == "JAVA=":
+            exec(line)
+        elif line[:11] == "PICARD_JAR=":
+            exec(line)
+picard = "{} -Xmx4g -jar {}".format(JAVA, PICARD_JAR)
 
 def generic_parse(line):
     values = line.strip().split()
@@ -128,7 +137,7 @@ def main():
     ## Sort Vcf
     ##
     try:
-        subprocess.check_call(["picard", "SortVcf", "CREATE_INDEX=false",
+        subprocess.check_call([picard, "SortVcf", "CREATE_INDEX=false",
             "I=" + f_tmp.name, "O=" + f_tmp.name + ".vcf", "SD=" + args.seq_dict])
     finally:
         os.remove(f_tmp.name)
