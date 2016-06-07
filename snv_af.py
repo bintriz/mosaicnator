@@ -11,7 +11,7 @@ import os
 config = os.path.dirname(os.path.realpath(__file__)) + "/job.config"
 with open(config) as f:
     for line in f:
-        if line[:8] == "SAMTOOLS":
+        if line[:9] == "SAMTOOLS=":
             exec(line)
             break
 
