@@ -3,7 +3,6 @@
 #$ -cwd
 #$ -l h_vmem=16G
 
-BIN_PATH="$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/../.."
 source $BIN_PATH/job.config
 
 VARSCAN="$JAVA -Xmx4g -jar $VARSCAN_JAR"

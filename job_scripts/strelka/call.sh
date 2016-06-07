@@ -3,7 +3,6 @@
 #$ -cwd
 #$ -pe threaded 16
 
-BIN_PATH="$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/../.."
 source $BIN_PATH/job.config
 
 REF=$1

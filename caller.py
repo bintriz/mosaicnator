@@ -33,9 +33,12 @@ class Caller(metaclass=ABCMeta):
         return '{}_-_{}'.format(clname, tiname)
 
     @property
+    def bin_path(self):
+        return os.path.dirname(os.path.realpath(__file__))
+
+    @property
     def script_dir(self):
-        return '{}/job_scripts/{}'.format(
-            os.path.dirname(os.path.realpath(__file__)), self.caller_name)
+        return '{}/job_scripts/{}'.format(self.bin_path, self.caller_name)
         
     @property
     def qerr_dir(self):
@@ -85,8 +88,8 @@ class Caller(metaclass=ABCMeta):
         return n
     
     def _qopt(self, jprefix, hold_jid=''):
-        qopt = '-N {}_{}.{} -e {} -o {}'.format(
-            jprefix, self.caller_name, self.sample_name, self.qerr_dir, self.qout_dir)
+        qopt = '-N {}_{}.{} -e {} -o {} -v BIN_PATH={}'.format(
+            jprefix, self.caller_name, self.sample_name, self.qerr_dir, self.qout_dir, self.bin_path)
         if hold_jid == '':
             return qopt
         else:

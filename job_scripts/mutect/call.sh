@@ -3,7 +3,6 @@
 #$ -cwd
 #$ -l h_vmem=12G
 
-BIN_PATH="$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/../.."
 source $BIN_PATH/job.config
 
 if [[ -f $GATK_KEY ]]; then

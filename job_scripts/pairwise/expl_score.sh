@@ -2,8 +2,6 @@
 #$ -q 1-day
 #$ -cwd
 
-BIN_PATH="$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/../.."
-
 FLIST=$1
 OUT=$2
 

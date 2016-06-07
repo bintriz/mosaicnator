@@ -39,11 +39,14 @@ class Somatic:
         clname = os.path.splitext(os.path.basename(self.clone))[0]
         tiname = os.path.splitext(os.path.basename(self.tissue))[0]
         return '{}_-_{}'.format(clname, tiname)
+    
+    @property
+    def bin_path(self):
+        return os.path.dirname(os.path.realpath(__file__))
 
     @property
     def script_dir(self):
-        return '{}/job_scripts/{}'.format(
-            os.path.dirname(os.path.realpath(__file__)), self.worker_name)
+        return '{}/job_scripts/{}'.format(self.bin_path, self.worker_name)
         
     @property
     def qerr_dir(self):
@@ -147,8 +150,8 @@ class Somatic:
             self._check_bam(tissue)
     
     def _qopt(self, jprefix, hold_jid=''):
-        qopt = '-N {}.{} -e {} -o {}'.format(
-            jprefix, self.sample_name, self.qerr_dir, self.qout_dir)
+        qopt = '-N {}.{} -e {} -o {} -v BIN_PATH={}'.format(
+            jprefix, self.sample_name, self.qerr_dir, self.qout_dir, self.bin_path)
         if hold_jid == '':
             return qopt
         else:

@@ -2,8 +2,6 @@
 #$ -q 4-days
 #$ -cwd
 
-BIN_PATH="$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/../.."
-
 MINMQ=$1
 MINBQ=$2
 CLONEBAM=$3

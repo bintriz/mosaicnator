@@ -4,7 +4,6 @@
 #$ -pe threaded 16
 #$ -l h_vmem 8G
 
-BIN_PATH="$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/../.."
 source $BIN_PATH/job.config
 
 REF=$1
