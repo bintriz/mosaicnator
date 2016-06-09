@@ -7,10 +7,10 @@ source $BIN_PATH/job.config
 
 if [[ -f $GATK_KEY ]]; then
     MUTECT="$JAVA7 -Xmx8g -jar $MUTECT_JAR -T MuTect -et NO_ET -K $GATK_KEY
-    --logging_level ERROR --only_passing_calls"
+    -log /dev/stderr --logging_level ERROR --only_passing_calls"
 else
     MUTECT="$JAVA7 -Xmx8g -jar $MUTECT_JAR -T MuTect
-    --logging_level ERROR --only_passing_calls"
+    -log /dev/stderr --logging_level ERROR --only_passing_calls"
 fi
 
 REF=$1
@@ -28,7 +28,7 @@ else
     rm -f $OUTPREFIX.txt $MD5PREFIX.txt.md5
     $MUTECT -R $REF \
         -I:tumor $CLONEBAM -I:normal $TISSUEBAM \
-        --out $OUTPREFIX.txt
+        --out $OUTPREFIX.txt > /dev/null
     if [[ $? = 0 ]]; then
         mkdir -p $CHECKSUMDIR
         md5sum $OUTPREFIX.txt > $MD5PREFIX.txt.md5
