@@ -18,11 +18,11 @@ head -n2 $(ls $PREFIX.*.txt|head -n1) > $OUT
 for INTERVAL in $(cat $CHUNKFILE); do
     CHUNK=$PREFIX.${INTERVAL/:/-}.txt
     CHUNKMD5=$MD5PREFIX.${INTERVAL/:/-}.txt.md5
-    
+
     if [[ -f $CHUNK && -f $CHUNKMD5 && \
             $(md5sum $CHUNK|cut -f1 -d' ') = \
             $(cut -f1 -d' ' $CHUNKMD5) ]]; then
-        tail -n+3 $CHUNK |grep KEEP$ >> $OUT
+        tail -n+3 $CHUNK |grep KEEP$ |cat >> $OUT
     else
         echo "$CHUNK doesn't exist or doesn't match to the checksum."
         exit 1

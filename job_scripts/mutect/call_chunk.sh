@@ -25,7 +25,7 @@ MD5PREFIX=$CHECKSUMDIR/$(basename $OUTPREFIX)
 
 if [[ -f $OUTPREFIX.txt && -f $MD5PREFIX.txt.md5 && \
         $(md5sum $OUTPREFIX.txt|cut -f1 -d' ') = \
-        $(cut -f -d' ' $MD5PREFIX.txt.md5) ]]; then
+        $(cut -f1 -d' ' $MD5PREFIX.txt.md5) ]]; then
     echo "$OUTPREFIX.txt exists and matches to the checksum"
 else
     rm -f $OUTPREFIX.txt $MD5PREFIX.txt.md5
