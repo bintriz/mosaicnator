@@ -1,7 +1,6 @@
 #!/data2/external_data/Abyzov_Alexej_m124423/apps/pyenv/versions/3.5.1/bin/python
 
 import argparse
-import fileinput
 import re
 import subprocess
 import sys
