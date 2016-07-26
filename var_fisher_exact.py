@@ -1,7 +1,6 @@
 #!/data2/external_data/Abyzov_Alexej_m124423/apps/pyenv/versions/3.5.1/bin/python
 
 import argparse
-import fileinput
 import re
 import scipy.stats as stats
 import subprocess
@@ -20,11 +19,11 @@ def print_stat(args):
     stat_test = fisher_exact(
         ref_alt_n(pileup(args.case, args.min_MQ, args.min_BQ, clean(count()))),
         ref_alt_n(pileup(args.control, args.min_MQ, args.min_BQ, clean(count()))))
-    header = '\t'.join((
-        '#chr\tpos\tref\talt\tfisher_exact_pvalue',
-        'case_ref_n_{0}\tcase_alt_n_{0}\tcontrol_ref_n_{1}\tcontrol_alt_n_{1}'.format(
-            os.path.basename(args.case).replace('.bam',''), 
-            os.path.basename(args.control).replace('.bam',''))))
+    sample_info = '##case   : {}\n##control: {}\n'.format(
+        ', '.join(os.path.basename(bam) for bam in args.case), 
+        ', '.join(os.path.basename(bam) for bam in args.control))
+    header = (sample_info + '#chr\tpos\tref\talt\tpvalue\t' +
+              'case_ref_n\tcase_alt_n\tcontrol_ref_n\tcontrol_alt_n')
     printer(header)
     for snv in args.infile:
         if snv[0] == '#':
@@ -62,20 +61,21 @@ def ref_alt_n(target):
         result = (ref_n, alt_n)
 
 @coroutine
-def pileup(bam, min_MQ, min_BQ, target):
+def pileup(bams, min_MQ, min_BQ, target):
+    cmd = [SAMTOOLS, 'mpileup', '-d', '8000', '-q', str(min_MQ), '-Q', str(min_BQ)]
     result = None
     while True:
         chrom, pos = (yield result)
-        cmd = [SAMTOOLS, 'mpileup', '-d', '8000',
-               '-q', str(min_MQ), '-Q', str(min_BQ),
-               '-r', '{}:{}-{}'.format(chrom, pos, pos), bam]
-        try:
-            bases = subprocess.run(
-                cmd, universal_newlines=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL).stdout.split()[4]
-        except IndexError:
-            bases = ''
+        region = ['-r', '{}:{}-{}'.format(chrom, pos, pos)]
+        bases = ''
+        for bam in bams:
+            try:
+                bases = bases + subprocess.run(
+                    cmd + region + [bam], universal_newlines=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL).stdout.split()[4]
+            except IndexError:
+                pass
         result = target.send(bases)
 
 @coroutine
@@ -127,13 +127,13 @@ def main():
 
     parser.add_argument(
         '-c', '--case', metavar='FILE',
-        help='case bam file',
-        required=True)
+        help='case bam file', 
+        required=True, action='append')
 
     parser.add_argument(
         '-t', '--control', metavar='FILE',
         help='control bam file',
-        required=True)
+        required=True, action='append')
 
     parser.add_argument(
         '-q', '--min-MQ', metavar='INT',
