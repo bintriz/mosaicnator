@@ -63,7 +63,7 @@ fi
 # Main
 out_vcf=$out_name.decomp.norm.uniq.vcf.gz
 out_log=$out_name.decomp.norm.uniq.log
-config=$(readlink -f ${BASH_SOURCE[0]})/job.config
+config=$(readlink -f ${BASH_SOURCE[0]}|xargs dirname)/job.config
 eval $(grep ^VT $config)
 
 if [ ! -z $sflag ]; then
