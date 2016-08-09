@@ -60,11 +60,15 @@ def pileup(bam, min_MQ, min_BQ, target):
         cmd = [SAMTOOLS, 'mpileup', '-d', '8000',
                '-q', str(min_MQ), '-Q', str(min_BQ),
                '-r', '{}:{}-{}'.format(chrom, pos, pos), bam]
+        cmd_out = subprocess.run(
+            cmd, universal_newlines=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
-            bases = subprocess.run(
-                cmd, universal_newlines=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL).stdout.split()[4]
+            cmd_out.check_returncode()
+        except subprocess.CalledProcessError:
+            sys.exit(cmd_out.stderr)
+        try:
+            bases = cmd_out.stdout.split()[4]
         except IndexError:
             bases = ''
         result = target.send(bases)

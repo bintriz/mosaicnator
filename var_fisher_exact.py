@@ -69,11 +69,15 @@ def pileup(bams, min_MQ, min_BQ, target):
         region = ['-r', '{}:{}-{}'.format(chrom, pos, pos)]
         bases = ''
         for bam in bams:
+            cmd_out = subprocess.run(
+                cmd + region + [bam], universal_newlines=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             try:
-                bases = bases + subprocess.run(
-                    cmd + region + [bam], universal_newlines=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL).stdout.split()[4]
+                cmd_out.check_returncode()
+            except subprocess.CalledProcessError:
+                sys.exit(cmd_out.stderr)
+            try:
+                bases = bases + cmd_out.stdout.split()[4]
             except IndexError:
                 pass
         result = target.send(bases)
