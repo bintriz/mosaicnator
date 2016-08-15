@@ -46,7 +46,8 @@ def fisher_exact(target_c, target_t):
         chrom, pos, ref, alt = (yield result)
         ref_n_c, alt_n_c = target_c.send((chrom, pos, ref, alt))
         ref_n_t, alt_n_t = target_t.send((chrom, pos, ref, alt))
-        oddsratio, pvalue = stats.fisher_exact([[ref_n_c, alt_n_c],[ref_n_t, alt_n_t]])
+        oddsratio, pvalue = stats.fisher_exact([[alt_n_c, ref_n_c],
+                                                [alt_n_t, ref_n_t]], 'greater')
         result = '{:.5e}\t{}\t{}\t{}\t{}'.format(
             pvalue, ref_n_c, alt_n_c, ref_n_t, alt_n_t)
 
