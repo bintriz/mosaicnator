@@ -26,7 +26,7 @@ def print_af(args):
             continue
         chrom, pos, ref, alt = snv.strip().split()[:4]
         af = '\t'.join([af_routine.send((chrom, pos, ref, alt)) for af_routine in af_routines])
-        printer('{}\t{}\t{}\t{}\t{}'.format(chrom, pos, ref, alt, af))
+        printer('{}\t{}\t{}\t{}\t{}'.format(chrom, pos, ref.upper(), alt.upper(), af))
         
             
 def coroutine(func):
