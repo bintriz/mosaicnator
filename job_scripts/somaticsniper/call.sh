@@ -1,6 +1,7 @@
 #!/bin/bash
 #$ -q 4-days
 #$ -cwd
+#$ -l h_vmem=4G
 
 source $BIN_PATH/job.config
 

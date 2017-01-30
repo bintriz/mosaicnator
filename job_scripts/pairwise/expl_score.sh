@@ -2,6 +2,8 @@
 #$ -q 1-day
 #$ -cwd
 
+source $BIN_PATH/job.config
+
 FLIST=$1
 OUT=$2
 

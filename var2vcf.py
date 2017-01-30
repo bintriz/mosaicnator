@@ -14,7 +14,6 @@ with open(config) as f:
             exec(line)
         elif line[:11] == "PICARD_JAR=":
             exec(line)
-picard = "{} -Xmx4g -jar {}".format(JAVA, PICARD_JAR)
 
 def generic_parse(line):
     values = line.strip().split()
@@ -137,8 +136,12 @@ def main():
     ## Sort Vcf
     ##
     try:
-        subprocess.check_call([picard, "SortVcf", "CREATE_INDEX=false",
-            "I=" + f_tmp.name, "O=" + f_tmp.name + ".vcf", "SD=" + args.seq_dict])
+        subprocess.check_call([
+            JAVA, "-Xmx4g", "-jar" , PICARD_JAR,
+            "SortVcf", "CREATE_INDEX=false",
+            "I=" + f_tmp.name, 
+            "O=" + f_tmp.name + ".vcf", 
+            "SD=" + args.seq_dict])
     finally:
         os.remove(f_tmp.name)
 

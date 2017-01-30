@@ -27,9 +27,9 @@ else
         --ref $REF --numproc $THREADS --two-pass --window 600
     if [[ $? = 0 ]]; then
         if [[ -f $VCF ]]; then
-            bgzip -c $VCF > $OUT
+            $BGZIP -c $VCF > $OUT
         else
-            bgzip -c $OUTDIR/main/somatic.5x.indel.vcf > $OUT
+            $BGZIP -c $OUTDIR/main/somatic.5x.indel.vcf > $OUT
         fi
         mkdir -p $CHECKSUMDIR
         md5sum $OUT > $OUTMD5

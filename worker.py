@@ -1,5 +1,4 @@
 import os
-import re
 from itertools import permutations
 from job_queue import GridEngineQueue
 from utils import (
@@ -19,10 +18,9 @@ class Somatic:
     def __init__(self, args):
         self.sample_file = args.infile
         self.var_type = args.var_type
-        self.ref = args.ref
-        self.refidx = args.ref + '.fai'
         self.min_af = args.min_AF
         self.skip_on = args.skip_on
+        self.chunk_size = args.chunk_size
             
         self.q = GridEngineQueue()
         self.hold_jid = {}
@@ -32,7 +30,7 @@ class Somatic:
 
     @property
     def worker_name(self):
-        return re.sub("(?!^)([A-Z]+)", r" \1", type(self).__name__).lower().split()[0]
+        return type(self).__name__.lower()
 
     @property
     def sample_name(self):
@@ -69,12 +67,8 @@ class Somatic:
         pairs = set()
         with open(self.sample_file) as f:
             for line in f:
-                try:
-                    clone, tissue = line.split()[:2]
-                    pairs.add((clone, tissue))
-                except ValueError as e:
-                    msg = 'Sample list file should have at least 2 columns.'
-                    raise e(msg)
+                clone, tissue = line.strip().split('\t')[:2]
+                pairs.add((clone, tissue))
         return pairs
     
     @property
@@ -87,40 +81,24 @@ class Somatic:
     def concall_file_ok(self):
         return self.skip_on and checksum_match(self.concall_file)
 
-    @staticmethod
-    def _check_ref(fasta):
-        if not os.path.isfile(fasta):
-            msg = "Can't find the reference file '{}'".format(fasta)
-            raise FileNotFoundError(msg)
-        if not os.path.isfile(fasta + '.fai'):
-            msg = "Can't find index for the fasta file '{}'".format(fasta)
-            raise FileNotFoundError(msg)
-        refname = os.path.splitext(fasta)[0]
-        if not os.path.isfile(refname + '.dict'):
-            msg = "Can't find dictionary for the fasta file '{}'".format(fasta)
-            raise FileNotFoundError(msg)
+    @property
+    def chunk_file(self):
+        f=lambda n,i=0:"{:.0f}{}".format(n," kMG"[i])*(n<1e3)or f(n/1e3, i+1)
+        return "{}.call/genomic_regions_{}_chunk.txt".format(
+            self.worker_name, f(self.chunk_size).strip())
 
-    @staticmethod
-    def _check_bam(bam):
-        if not os.path.isfile(bam):
-            msg = "Can't find the bam file '{}'".format(bam)
-            raise FileNotFoundError(msg)
-
-        bamname = os.path.splitext(bam)[0]
-        if not os.path.isfile(bamname + '.bai') and not os.path.isfile(bamname + '.bam.bai'):
-            msg = "Can't find index for the bam file '{}'".format(bam)
-            raise FileNotFoundError(msg)
+    @property
+    def chrom_file(self):
+        return "{}.call/genomic_regions_chrom.txt".format(self.worker_name)
 
     def _regist_caller(self, args):
         if self.var_type == "snv":
             self.caller = [SomaticSniper(args, self.worker_name),
                            Strelka(args, self.worker_name)]
             if args.chunk_on:
-                chunk_size = 25000000
-                chunk_file = self._chunkfile(chunk_size)
                 self.caller.extend([
-                    MuTect(args, self.worker_name, chunk_file),
-                    VarScan(args, self.worker_name, chunk_file)])
+                    MuTect(args, self.worker_name, self.chunk_file),
+                    VarScan(args, self.worker_name, self.chunk_file)])
             else:
                 self.caller.extend([
                     MuTect(args, self.worker_name),
@@ -129,12 +107,9 @@ class Somatic:
         elif self.var_type == "indel":
             self.caller = [Strelka(args, self.worker_name)]
             if args.chunk_on:
-                chunk_size = 25000000
-                chunk_file = self._chunkfile(chunk_size)
-                chrom_file = self._chromfile()
                 self.caller.extend([
-                    Scalpel(args, self.worker_name, chrom_file),
-                    VarScan(args, self.worker_name, chunk_file)])
+                    Scalpel(args, self.worker_name, self.chrom_file),
+                    VarScan(args, self.worker_name, self.chunk_file)])
             else:
                 self.caller.extend([
                     Scalpel(args, self.worker_name),
@@ -143,12 +118,6 @@ class Somatic:
     def _prepare_dir(self):
         make_dir(self.out_dir)
         
-    def _check_data(self):
-        self._check_ref(self.ref)
-        for clone, tissue in self.sample_list:
-            self._check_bam(clone)
-            self._check_bam(tissue)
-    
     def _qopt(self, jprefix, hold_jid=''):
         qopt = '-N {}.{} -e {} -o {} -v BIN_PATH={}'.format(
             jprefix, self.sample_name, self.qerr_dir, self.qout_dir, self.bin_path)
@@ -156,41 +125,6 @@ class Somatic:
             return qopt
         else:
             return qopt + ' -hold_jid {}'.format(hold_jid)
-
-    def _chunkfile(self, chunk_size):
-        f=lambda n,i=0:"{:.0f}{}".format(n," kMG"[i])*(n<1e3)or f(n/1e3, i+1)
-        chunk_file = "{}.call/genomic_regions_{}_chunk.txt".format(
-            self.worker_name, f(chunk_size).strip())
-        if not os.path.isfile(chunk_file):
-            make_dir(os.path.dirname(chunk_file))
-            with open(chunk_file, 'w') as out:
-                with open(self.refidx) as f:
-                    for line in f:
-                        chrom, chrom_size = line.split()[:2]
-                        chrom_size = int(chrom_size)
-                        for start in range(1, chrom_size, chunk_size):
-                            end = start + chunk_size - 1
-                            if end > chrom_size:
-                                end = chrom_size
-                            out.write('{}:{}-{}\n'.format(chrom, start, end))
-        return chunk_file
-
-    def _chromfile(self):
-        chrom_file = "{}.call/genomic_regions_chrom.txt".format(
-            self.worker_name)
-        if not os.path.isfile(chrom_file):
-            make_dir(os.path.dirname(chrom_file))
-            with open(chrom_file, 'w') as out:
-                with open(self.refidx) as f:
-                    chroms = []
-                    for line in f:
-                        chrom, chrom_size = line.split()[:2]
-                        chrom_size = int(chrom_size)
-                        chroms.append((chrom, chrom_size))
-                    chroms.sort(key=lambda chrom:chrom[1], reverse=True)
-                for chrom, end in chroms:
-                    out.write('{}:1-{}\n'.format(chrom, end))
-        return chrom_file
 
     def _concall(self, hold_jid):
         qopt = self._qopt('con_call', hold_jid)
@@ -225,7 +159,6 @@ class Somatic:
         return hold_jid
             
     def run(self):
-        self._check_data()
         for clone, tissue in self.sample_list:
             self.clone = clone
             self.tissue = tissue
@@ -253,12 +186,8 @@ class Sensitivity(Somatic):
         pairs = set()
         with open(self.sample_file) as f:
             for line in f:
-                try:
-                    clone = line.split()[0]
-                    pairs.add((clone, self.control_bam))
-                except ValueError as e:
-                    msg = 'Sample list file has empty line.'
-                    raise e(msg)
+                clone = line.strip().split('\t')[0]
+                pairs.add((clone, self.control_bam))
         return pairs
 
     @property
@@ -347,11 +276,7 @@ class Pairwise(Somatic):
         clones = set()
         with open(self.sample_file) as f:
             for line in f:
-                try:
-                    clones.add(line.split()[0])
-                except ValueError as e:
-                    msg = 'Sample list file has empty line.'
-                    raise e(msg)
+                clones.add(line.strip().split('\t')[0])
         return permutations(clones, 2)
 
     @property
@@ -385,7 +310,7 @@ class Pairwise(Somatic):
                 self.clone = clone
                 self.tissue = tissue
                 out.write(self.concall_file + '\n')
-        qopt = '-N expl_score -e q.err -o q.out'
+        qopt = '-N expl_score -e q.err -o q.out -v BIN_PATH={}'.format(self.bin_path)
         if hold_jid != '':
             qopt += ' -hold_jid {}'.format(hold_jid)
         cmd =  '{}/expl_score.sh {} {}'.format(
@@ -399,7 +324,6 @@ class Pairwise(Somatic):
             self._skip_msg('con_call')
             self._skip_msg('expl_score')
         else:
-            self._check_data()
             jids = []
             for clone, tissue in self.sample_list:
                 self.clone = clone

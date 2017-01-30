@@ -25,7 +25,7 @@ else
     $SCALPEL --somatic --tumor $CLONEBAM --normal $TISSUEBAM --dir $OUTDIR \
         --ref $REF --numproc $THREADS --two-pass --window 600
     if [[ $? = 0 ]]; then
-        bgzip -c ${OUT/%.gz} > $OUT
+        $BGZIP -c ${OUT/%.gz} > $OUT
         mkdir -p $CHECKSUMDIR
         md5sum $OUT > $OUTMD5
     fi

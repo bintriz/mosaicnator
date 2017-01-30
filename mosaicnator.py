@@ -1,22 +1,26 @@
 #!/data2/external_data/Abyzov_Alexej_m124423/apps/pyenv/versions/3.5.1/bin/python
 
 import argparse
-from worker import (
-    Somatic,
-    Sensitivity,
-    Pairwise)
+import checker
+import worker
 
 def somatic(args):
-        s = Somatic(args)
-        s.run()
+    c = checker.Somatic(args)
+    c.run()
+    w = worker.Somatic(args)
+    w.run()
 
 def sensitivity(args):
-    s = Sensitivity(args)
-    s.run()
+    c = checker.Sensitivity(args)
+    c.run()
+    w = worker.Sensitivity(args)
+    w.run()
 
 def pairwise(args):
-    s = Pairwise(args)
-    s.run()
+    c = checker.Pairwise(args)
+    c.run()
+    w = worker.Pairwise(args)
+    w.run()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -52,6 +56,11 @@ def main():
         '-e', '--exome', dest='chunk_on', action='store_false',
         help='Do not use chunk as it uses WES data. [off]',
         default=True)
+
+    parser_common.add_argument(
+        '-s', '--chunk_size', metavar='INT',
+        help='Chunk size [25000000]',
+        type=int, default=25000000)
 
     parser_common.add_argument(
         '-r', '--ref', metavar='FILE',
