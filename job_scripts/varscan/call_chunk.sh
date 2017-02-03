@@ -26,7 +26,7 @@ if [[ -f $OUTPREFIX.snp && -f $MD5PREFIX.snp.md5 && \
     echo "$OUTPREFIX.snp/indel exist and match to the corresponding checksum."
 else
     rm -f $OUTPREFIX.snp $MD5PREFIX.snp.md5 $OUTPREFIX.indel $MD5PREFIX.indel.md5
-    if [[ $($SAMTOOLS mpileup -f $REF -r $INTERBAL $TISSUEBAM $CLONEBAM|head|wc -l) = 0 ]]; then
+    if [[ $($SAMTOOLS mpileup -f $REF -r $INTERVAL $TISSUEBAM $CLONEBAM|head|wc -l) = 0 ]]; then
         touch $OUTPREFIX.snp $OUTPREFIX.indel
     else
         $SAMTOOLS mpileup -f $REF -r $INTERVAL $TISSUEBAM $CLONEBAM \
