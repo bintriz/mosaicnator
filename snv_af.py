@@ -142,7 +142,7 @@ def main():
     parser.add_argument(
         'infile', metavar='snv_list.txt',
         help='''SNV list.
-        Each line format is "chr\\tpos\\t\\tref\\alt".
+        Each line format is "chr\\tpos\\tref\\talt".
         Trailing columns will be ignored. [STDIN]''',
         nargs='?', type=argparse.FileType('r'),
         default=sys.stdin)
