@@ -8,7 +8,7 @@ class GridEngineQueue:
     jstate = defaultdict(list)
     is_1st_print = True
 
-    def __init__(self, q_max=8000):
+    def __init__(self, q_max=2000):
         self.q_max = q_max
 
     @property
