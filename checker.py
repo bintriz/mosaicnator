@@ -33,6 +33,7 @@ class Somatic:
         with open(self.ref + '.fai') as f:
             for line in f:
                 chrom, length = line.split('\t')[:2]
+                chrom = chrom.split(' ')[0]
                 sq.add((chrom, length))
         self.ref_sq = sq
 
