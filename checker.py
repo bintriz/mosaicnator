@@ -102,7 +102,8 @@ class Somatic:
             with open(chunk_file, 'w') as out:
                 with open(self.ref + '.fai') as f:
                     for line in f:
-                        chrom, length = line.split()[:2]
+                        chrom, length = line.split('\t')[:2]
+                        chrom = chrom.split(' ')[0]
                         length = int(length)
                         for start in range(1, length, self.chunk_size):
                             end = start + self.chunk_size - 1
