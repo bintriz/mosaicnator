@@ -105,11 +105,12 @@ class Somatic:
                         chrom, length = line.split('\t')[:2]
                         chrom = chrom.split(' ')[0]
                         length = int(length)
-                        for start in range(1, length, self.chunk_size):
-                            end = start + self.chunk_size - 1
-                            if end > length:
-                                end = length
-                            out.write('{}:{}-{}\n'.format(chrom, start, end))
+                        if chrom.replace("chr", "") in [str(i) for i in range(1, 23)] + ["X", "Y"]:
+                            for start in range(1, length, self.chunk_size):
+                                end = start + self.chunk_size - 1
+                                if end > length:
+                                    end = length
+                                out.write('{}:{}-{}\n'.format(chrom, start, end))
 
     def _chromfile(self):
         chrom_file = "{}.call/genomic_regions_chrom.txt".format(self.checker_name)
@@ -121,7 +122,8 @@ class Somatic:
                     for line in f:
                         chrom, length = line.split()[:2]
                         length = int(length)
-                        chroms.append((chrom, length))
+                        if chrom.replace("chr", "") in [str(i) for i in range(1, 23)] + ["X", "Y"]:
+                            chroms.append((chrom, length))
                     chroms.sort(key=lambda chrom:chrom[1], reverse=True)
                 for chrom, end in chroms:
                     out.write('{}:1-{}\n'.format(chrom, end))
